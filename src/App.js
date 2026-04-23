@@ -16,29 +16,45 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 
+const DIVISION_PREFIX = {
+  Finance: 'FIN',
+  Operasional: 'OPS',
+  Purchasing: 'PUR',
+  Marketing: 'MKT',
+  HR: 'HR',
+};
+
+const generateId = (divisions, assignees) => {
+  if (!assignees || assignees.length === 0) return `TSK-${Date.now().toString().slice(-6)}`;
+  const firstAssignee = assignees[0];
+  const div = Object.entries(divisions).find(([, { members }]) => members.some(m => m.name === firstAssignee))?.[0];
+  const prefix = div ? (DIVISION_PREFIX[div] || 'TSK') : 'TSK';
+  return `${prefix}-${Date.now().toString().slice(-6)}`;
+};
+
 const DEFAULT_DIVISIONS = {
   Finance: { members: [
-    { name: 'Dhika', email: 'dhika@company.com' },
-    { name: 'Ilham', email: 'ilham@company.com' },
-    { name: 'Yafi', email: 'yafi@company.com' },
-    { name: 'Hikmah', email: 'hikmah@company.com' },
+    { name: 'Dhika', email: 'gardhikafudgybro@gmail.com' },
+    { name: 'Ilham', email: 'ilhamhaqiqi21@gmail.com' },
+    { name: 'Yafi', email: 'yafialjafier18@gmail.com' },
+    { name: 'Hikmah', email: 'hikmahtul74@gmail.com' },
   ], color: '#0EA5E9', icon: '💰' },
   Operasional: { members: [
-    { name: 'Tito', email: 'tito@company.com' },
-    { name: 'Ivana', email: 'ivana@company.com' },
-    { name: 'Ian', email: 'ian@company.com' },
-    { name: 'Dhanny', email: 'dhanny@company.com' },
+    { name: 'Tito', email: 'titobagussetiawan.fudgybro@gmail.com' },
+    { name: 'Ivana', email: 'ivana.fudgybro@gmail.com' },
+    { name: 'Ian', email: 'zackydimas5@gmail.com' },
+    { name: 'Dhanny', email: 'daydanny07@gmail.com' },
   ], color: '#10B981', icon: '⚙️' },
   Purchasing: { members: [
-    { name: 'Fredy', email: 'fredy@company.com' },
+    { name: 'Fredy', email: 'prakosof26@gmail.com' },
   ], color: '#F59E0B', icon: '🛒' },
   Marketing: { members: [
-    { name: 'Ghina', email: 'ghina@company.com' },
-    { name: 'Nasywa', email: 'nasywa@company.com' },
-    { name: 'Nabila', email: 'nabila@company.com' },
+    { name: 'Ghina', email: 'ghina.fudgybro@gmail.com' },
+    { name: 'Nasywa', email: 'nasywa.widyaputri@gmail.com' },
+    { name: 'Nabila', email: 'nabillazzahrahmat@gmail.com' },
   ], color: '#EC4899', icon: '📢' },
   HR: { members: [
-    { name: 'Musfita', email: 'musfita@company.com' },
+    { name: 'Musfita', email: 'muspitarohmi@gmail.com' },
   ], color: '#8B5CF6', icon: '👥' },
 };
 
@@ -226,14 +242,18 @@ const SettingsView = ({ divisions, setDivisions }) => {
 const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
   const allMembers = Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color })));
   const [form, setForm] = useState(task || {
-    id: `TSK-${Date.now().toString().slice(-6)}`, name: '', description: '',
+    id: '', name: '', description: '', driveUrl: '',
     assignees: [], project: PROJECTS[0], priority: 'Medium', status: 'To Do', progress: 0,
     startDate: new Date().toISOString().split('T')[0],
     deadline: new Date(Date.now() + 7*86400000).toISOString().split('T')[0],
   });
   const [assigneeOpen, setAssigneeOpen] = useState(false);
 
-  const toggleAssignee = name => setForm(f => ({ ...f, assignees: f.assignees.includes(name) ? f.assignees.filter(n => n !== name) : [...f.assignees, name] }));
+  const toggleAssignee = name => setForm(f => {
+    const newAssignees = f.assignees.includes(name) ? f.assignees.filter(n => n !== name) : [...f.assignees, name];
+    const newId = !task ? generateId(divisions, newAssignees) : f.id;
+    return { ...f, assignees: newAssignees, id: newId };
+  });
 
   const handleSubmit = () => {
     if (!form.name.trim()) { alert('Nama tugas wajib diisi'); return; }
@@ -321,6 +341,20 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Progress: {form.progress}%</label>
               <input type="range" min="0" max="100" step="5" value={form.progress} onChange={e => setForm({...form, progress: +e.target.value})} className="w-full mt-2 accent-orange-500" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Link Google Drive (opsional)</label>
+            <div className="flex gap-2 items-center">
+              <input type="url" value={form.driveUrl || ''} onChange={e => setForm({...form, driveUrl: e.target.value})}
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                placeholder="https://drive.google.com/..." />
+              {form.driveUrl && (
+                <a href={form.driveUrl} target="_blank" rel="noreferrer"
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium whitespace-nowrap">
+                  Buka →
+                </a>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
