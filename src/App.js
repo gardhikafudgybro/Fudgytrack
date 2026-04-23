@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "firebase/firestore";
-import { LayoutDashboard, ListTodo, Users, Plus, Search, X, Mail, Trash2, ChevronDown, AlertCircle, CheckCircle2, Clock, PauseCircle, Circle, TrendingUp, Zap } from "lucide-react";
+import { LayoutDashboard, ListTodo, Users, Plus, Search, X, Mail, Trash2, ChevronDown, AlertCircle, CheckCircle2, Clock, PauseCircle, Circle, TrendingUp, Zap, Settings, Edit2, UserPlus } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const firebaseConfig = {
@@ -16,17 +16,31 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 
-const DIVISIONS = {
-  Finance: { members: ['Dhika', 'Ilham', 'Yafi', 'Hikmah'], color: '#0EA5E9', icon: '💰' },
-  Operasional: { members: ['Tito', 'Ivana', 'Ian', 'Dhanny'], color: '#10B981', icon: '⚙️' },
-  Purchasing: { members: ['Fredy'], color: '#F59E0B', icon: '🛒' },
-  Marketing: { members: ['Ghina', 'Nasywa', 'Nabila'], color: '#EC4899', icon: '📢' },
-  HR: { members: ['Musfita'], color: '#8B5CF6', icon: '👥' },
+const DEFAULT_DIVISIONS = {
+  Finance: { members: [
+    { name: 'Dhika', email: 'dhika@company.com' },
+    { name: 'Ilham', email: 'ilham@company.com' },
+    { name: 'Yafi', email: 'yafi@company.com' },
+    { name: 'Hikmah', email: 'hikmah@company.com' },
+  ], color: '#0EA5E9', icon: '💰' },
+  Operasional: { members: [
+    { name: 'Tito', email: 'tito@company.com' },
+    { name: 'Ivana', email: 'ivana@company.com' },
+    { name: 'Ian', email: 'ian@company.com' },
+    { name: 'Dhanny', email: 'dhanny@company.com' },
+  ], color: '#10B981', icon: '⚙️' },
+  Purchasing: { members: [
+    { name: 'Fredy', email: 'fredy@company.com' },
+  ], color: '#F59E0B', icon: '🛒' },
+  Marketing: { members: [
+    { name: 'Ghina', email: 'ghina@company.com' },
+    { name: 'Nasywa', email: 'nasywa@company.com' },
+    { name: 'Nabila', email: 'nabila@company.com' },
+  ], color: '#EC4899', icon: '📢' },
+  HR: { members: [
+    { name: 'Musfita', email: 'musfita@company.com' },
+  ], color: '#8B5CF6', icon: '👥' },
 };
-
-const ALL_MEMBERS = Object.entries(DIVISIONS).flatMap(([div, { members }]) =>
-  members.map(name => ({ name, division: div, email: `${name.toLowerCase()}@company.com` }))
-);
 
 const PRIORITY_CONFIG = {
   Urgent: { color: '#EF4444', bg: '#FEE2E2' },
@@ -74,13 +88,14 @@ const PriorityBadge = ({ priority }) => {
   return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style={{ color: cfg.color, backgroundColor: cfg.bg }}>{priority === 'Urgent' && '🔥'} {priority}</span>;
 };
 
-const AssigneeAvatars = ({ assignees, max = 3 }) => {
+const AssigneeAvatars = ({ assignees, divisions, max = 3 }) => {
+  const allMembers = Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color })));
   const visible = assignees.slice(0, max); const extra = assignees.length - max;
   return (
     <div className="flex -space-x-2">
       {visible.map(name => {
-        const m = ALL_MEMBERS.find(x => x.name === name);
-        const color = m ? DIVISIONS[m.division].color : '#64748B';
+        const m = allMembers.find(x => x.name === name);
+        const color = m ? m.color : '#64748B';
         return <div key={name} title={name} className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white shadow-sm" style={{ backgroundColor: color }}>{name[0]}</div>;
       })}
       {extra > 0 && <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold border-2 border-white">+{extra}</div>}
@@ -88,7 +103,128 @@ const AssigneeAvatars = ({ assignees, max = 3 }) => {
   );
 };
 
-const TaskModal = ({ task, onClose, onSave, onDelete }) => {
+// ─── Settings View ───────────────────────────────────────────────────────────
+const SettingsView = ({ divisions, setDivisions }) => {
+  const [editModal, setEditModal] = useState(null); // { divKey, memberIdx } or 'new'
+  const [form, setForm] = useState({ name: '', email: '', division: Object.keys(divisions)[0] });
+
+  const openEdit = (divKey, idx) => {
+    const m = divisions[divKey].members[idx];
+    setForm({ name: m.name, email: m.email, division: divKey });
+    setEditModal({ divKey, idx });
+  };
+
+  const openNew = () => {
+    setForm({ name: '', email: '', division: Object.keys(divisions)[0] });
+    setEditModal('new');
+  };
+
+  const saveEdit = () => {
+    if (!form.name.trim() || !form.email.trim()) { alert('Nama dan email wajib diisi'); return; }
+    const updated = JSON.parse(JSON.stringify(divisions));
+    if (editModal === 'new') {
+      updated[form.division].members.push({ name: form.name, email: form.email });
+    } else {
+      const { divKey, idx } = editModal;
+      if (divKey !== form.division) {
+        updated[divKey].members.splice(idx, 1);
+        updated[form.division].members.push({ name: form.name, email: form.email });
+      } else {
+        updated[divKey].members[idx] = { name: form.name, email: form.email };
+      }
+    }
+    setDivisions(updated);
+    setEditModal(null);
+  };
+
+  return (
+    <div className="space-y-4 max-w-[900px]">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-slate-900">Data Karyawan</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Edit nama, email, dan tambah karyawan baru</p>
+        </div>
+        <button onClick={openNew} className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5">
+          <UserPlus size={15} /> Tambah Karyawan
+        </button>
+      </div>
+
+      {Object.entries(divisions).map(([divKey, { members, color, icon }]) => (
+        <div key={divKey} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2" style={{ backgroundColor: `${color}10` }}>
+            <span className="text-lg">{icon}</span>
+            <span className="font-bold text-slate-900">{divKey}</span>
+            <span className="text-xs text-slate-500 ml-1">({members.length} orang)</span>
+          </div>
+          <table className="w-full">
+            <thead><tr className="bg-slate-50 border-b border-slate-100">
+              <th className="text-left px-4 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama</th>
+              <th className="text-left px-4 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Email</th>
+              <th className="px-4 py-2 w-16"></th>
+            </tr></thead>
+            <tbody>
+              {members.map((m, idx) => (
+                <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: color }}>{m.name[0]}</div>
+                      <span className="text-sm font-semibold text-slate-900">{m.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{m.email}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button onClick={() => openEdit(divKey, idx)} className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-slate-900">
+                      <Edit2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+
+      {/* Edit/Add Modal */}
+      {editModal !== null && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <h2 className="font-bold text-slate-900">{editModal === 'new' ? 'Tambah Karyawan' : 'Edit Karyawan'}</h2>
+              <button onClick={() => setEditModal(null)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Nama</label>
+                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Nama lengkap..." />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Email</label>
+                <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="email@perusahaan.com" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Divisi</label>
+                <select value={form.division} onChange={e => setForm({...form, division: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                  {Object.entries(divisions).map(([k, { icon }]) => <option key={k} value={k}>{icon} {k}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+              <button onClick={() => setEditModal(null)} className="px-4 py-2 text-slate-700 hover:bg-slate-200 rounded-lg text-sm font-medium">Batal</button>
+              <button onClick={saveEdit} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold">Simpan</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Task Modal ───────────────────────────────────────────────────────────────
+const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
+  const allMembers = Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color })));
   const [form, setForm] = useState(task || {
     id: `TSK-${Date.now().toString().slice(-6)}`, name: '', description: '',
     assignees: [], project: PROJECTS[0], priority: 'Medium', status: 'To Do', progress: 0,
@@ -106,7 +242,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete }) => {
   };
 
   const sendEmail = () => {
-    const to = form.assignees.map(n => ALL_MEMBERS.find(m => m.name === n)?.email).filter(Boolean).join(',');
+    const to = form.assignees.map(n => allMembers.find(m => m.name === n)?.email).filter(Boolean).join(',');
     const sub = encodeURIComponent(`[Task] ${form.name}`);
     const body = encodeURIComponent(`Halo,\n\nKamu di-assign ke tugas:\n\nID: ${form.id}\nNama: ${form.name}\nProject: ${form.project}\nPrioritas: ${form.priority}\nDeadline: ${formatDate(form.deadline)}\n\nTerima kasih.`);
     window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${sub}&body=${body}`, '_blank');
@@ -137,21 +273,24 @@ const TaskModal = ({ task, onClose, onSave, onDelete }) => {
             {form.assignees.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {form.assignees.map(name => {
-                  const m = ALL_MEMBERS.find(x => x.name === name);
-                  return <span key={name} className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-white" style={{ backgroundColor: DIVISIONS[m.division].color }}>{name}<button onClick={() => toggleAssignee(name)}><X size={11} /></button></span>;
+                  const m = allMembers.find(x => x.name === name);
+                  return <span key={name} className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-white" style={{ backgroundColor: m?.color || '#64748B' }}>{name}<button onClick={() => toggleAssignee(name)}><X size={11} /></button></span>;
                 })}
               </div>
             )}
             {assigneeOpen && (
               <div className="mt-2 border border-slate-200 rounded-lg max-h-48 overflow-y-auto bg-white">
-                {Object.entries(DIVISIONS).map(([div, { members, color, icon }]) => (
+                {Object.entries(divisions).map(([div, { members, color, icon }]) => (
                   <div key={div}>
                     <div className="px-3 py-1.5 bg-slate-50 text-xs font-bold text-slate-600 uppercase tracking-wide sticky top-0">{icon} {div}</div>
-                    {members.map(name => (
-                      <label key={name} className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 cursor-pointer border-t border-slate-100">
-                        <input type="checkbox" checked={form.assignees.includes(name)} onChange={() => toggleAssignee(name)} className="accent-orange-500" />
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: color }}>{name[0]}</div>
-                        <span className="text-sm">{name}</span>
+                    {members.map(m => (
+                      <label key={m.name} className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 cursor-pointer border-t border-slate-100">
+                        <input type="checkbox" checked={form.assignees.includes(m.name)} onChange={() => toggleAssignee(m.name)} className="accent-orange-500" />
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: color }}>{m.name[0]}</div>
+                        <div>
+                          <div className="text-sm">{m.name}</div>
+                          <div className="text-[10px] text-slate-400">{m.email}</div>
+                        </div>
                       </label>
                     ))}
                   </div>
@@ -207,14 +346,18 @@ const TaskModal = ({ task, onClose, onSave, onDelete }) => {
   );
 };
 
+// ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [tasks, setTasks] = useState([]);
+  const [divisions, setDivisions] = useState(DEFAULT_DIVISIONS);
   const [loading, setLoading] = useState(true);
   const [fbStatus, setFbStatus] = useState('connecting');
   const [view, setView] = useState('dashboard');
   const [modalTask, setModalTask] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [filters, setFilters] = useState({ search: '', division: 'All', status: 'All', priority: 'All' });
+
+  const allMembers = useMemo(() => Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color }))), [divisions]);
 
   useEffect(() => {
     const ref = collection(db, 'tasks');
@@ -228,31 +371,20 @@ export default function App() {
         setFbStatus('connected');
       }
       setLoading(false);
-    }, (err) => {
-      console.error(err);
-      setFbStatus('error');
-      setLoading(false);
-    });
+    }, (err) => { console.error(err); setFbStatus('error'); setLoading(false); });
     return () => unsub();
   }, []);
 
-  const saveTask = async (task) => {
-    await setDoc(doc(db, 'tasks', task.id), task);
-    setModalOpen(false); setModalTask(null);
-  };
-
-  const deleteTask = async (id) => {
-    await deleteDoc(doc(db, 'tasks', id));
-    setModalOpen(false); setModalTask(null);
-  };
+  const saveTask = async (task) => { await setDoc(doc(db, 'tasks', task.id), task); setModalOpen(false); setModalTask(null); };
+  const deleteTask = async (id) => { await deleteDoc(doc(db, 'tasks', id)); setModalOpen(false); setModalTask(null); };
 
   const filtered = useMemo(() => tasks.filter(t => {
     if (filters.search && !t.name.toLowerCase().includes(filters.search.toLowerCase()) && !t.id.toLowerCase().includes(filters.search.toLowerCase())) return false;
-    if (filters.division !== 'All' && !t.assignees.some(a => DIVISIONS[filters.division].members.includes(a))) return false;
+    if (filters.division !== 'All' && !t.assignees.some(a => divisions[filters.division]?.members.map(m=>m.name).includes(a))) return false;
     if (filters.status !== 'All' && t.status !== filters.status) return false;
     if (filters.priority !== 'All' && t.priority !== filters.priority) return false;
     return true;
-  }), [tasks, filters]);
+  }), [tasks, filters, divisions]);
 
   const stats = useMemo(() => {
     const total = tasks.length, done = tasks.filter(t => t.status === 'Done').length;
@@ -262,12 +394,12 @@ export default function App() {
     const blocked = tasks.filter(t => t.status === 'Blocked').length;
     const completionRate = total ? Math.round((done / total) * 100) : 0;
     const byStatus = Object.keys(STATUS_CONFIG).map(s => ({ name: s, value: tasks.filter(t => t.status === s).length, color: STATUS_CONFIG[s].color }));
-    const byDivision = Object.entries(DIVISIONS).map(([name, { members, color }]) => {
-      const dt = tasks.filter(t => t.assignees.some(a => members.includes(a)));
+    const byDivision = Object.entries(divisions).map(([name, { members, color }]) => {
+      const dt = tasks.filter(t => t.assignees.some(a => members.map(m=>m.name).includes(a)));
       return { name, color, total: dt.length, done: dt.filter(t => t.status === 'Done').length, active: dt.filter(t => t.status !== 'Done').length };
     });
     return { total, done, inProgress, overdue, urgent, blocked, completionRate, byStatus, byDivision };
-  }, [tasks]);
+  }, [tasks, divisions]);
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
@@ -292,18 +424,23 @@ export default function App() {
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {[{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }, { id: 'tasks', label: 'Semua Tugas', icon: ListTodo }, { id: 'team', label: 'Tim & Divisi', icon: Users }].map(item => {
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { id: 'tasks', label: 'Semua Tugas', icon: ListTodo },
+            { id: 'team', label: 'Tim & Divisi', icon: Users },
+            { id: 'settings', label: 'Settings', icon: Settings },
+          ].map(item => {
             const Icon = item.icon; const active = view === item.id;
             return <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-orange-500 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><Icon size={16} />{item.label}</button>;
           })}
         </nav>
         <div className="p-3 border-t border-slate-800">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-3">Divisi</div>
-          {Object.entries(DIVISIONS).map(([name, { icon }]) => (
+          {Object.entries(divisions).map(([name, { icon }]) => (
             <button key={name} onClick={() => { setView('tasks'); setFilters(f => ({...f, division: name})); }}
               className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-slate-400 hover:bg-slate-800 hover:text-white">
               <span>{icon}</span><span className="flex-1 text-left">{name}</span>
-              <span className="text-[10px] opacity-60">{DIVISIONS[name].members.length}</span>
+              <span className="text-[10px] opacity-60">{divisions[name].members.length}</span>
             </button>
           ))}
         </div>
@@ -312,15 +449,19 @@ export default function App() {
       <main className="flex-1 overflow-x-hidden">
         <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">{view === 'dashboard' ? 'Dashboard' : view === 'tasks' ? 'Semua Tugas' : 'Tim & Divisi'}</h2>
-            <p className="text-xs text-slate-500 mt-0.5">{view === 'dashboard' ? `${stats.total} tugas · ${stats.completionRate}% selesai` : view === 'tasks' ? `${filtered.length} dari ${tasks.length} tugas` : `${ALL_MEMBERS.length} anggota`}</p>
+            <h2 className="text-xl font-bold text-slate-900">{view === 'dashboard' ? 'Dashboard' : view === 'tasks' ? 'Semua Tugas' : view === 'team' ? 'Tim & Divisi' : 'Settings'}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{view === 'dashboard' ? `${stats.total} tugas · ${stats.completionRate}% selesai` : view === 'tasks' ? `${filtered.length} dari ${tasks.length} tugas` : view === 'team' ? `${allMembers.length} anggota` : 'Kelola data karyawan'}</p>
           </div>
-          <button onClick={() => { setModalTask(null); setModalOpen(true); }} className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5">
-            <Plus size={16} /> Tugas Baru
-          </button>
+          {view !== 'settings' && (
+            <button onClick={() => { setModalTask(null); setModalOpen(true); }} className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5">
+              <Plus size={16} /> Tugas Baru
+            </button>
+          )}
         </header>
 
         <div className="p-6">
+          {view === 'settings' && <SettingsView divisions={divisions} setDivisions={setDivisions} />}
+
           {view === 'dashboard' && (
             <div className="space-y-5">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -332,7 +473,7 @@ export default function App() {
                   { label: 'Completion', value: `${stats.completionRate}%`, icon: TrendingUp, c: 'text-emerald-700 bg-emerald-100' },
                   { label: 'Urgent Aktif', value: stats.urgent, icon: Zap, c: 'text-orange-700 bg-orange-100' },
                   { label: 'Blocked', value: stats.blocked, icon: PauseCircle, c: 'text-red-700 bg-red-100' },
-                  { label: 'Anggota', value: ALL_MEMBERS.length, icon: Users, c: 'text-purple-700 bg-purple-100' },
+                  { label: 'Anggota', value: allMembers.length, icon: Users, c: 'text-purple-700 bg-purple-100' },
                 ].map(k => { const Icon = k.icon; return (
                   <div key={k.label} className="bg-white rounded-xl border border-slate-200 p-4">
                     <div className="flex items-start justify-between">
@@ -362,23 +503,6 @@ export default function App() {
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {stats.byDivision.map(d => {
-                  const cfg = DIVISIONS[d.name]; const pct = d.total ? Math.round((d.done/d.total)*100) : 0;
-                  return (
-                    <button key={d.name} onClick={() => { setView('tasks'); setFilters(f => ({...f, division: d.name})); }}
-                      className="bg-white rounded-xl border border-slate-200 p-4 text-left hover:shadow-md transition">
-                      <div className="text-xl mb-2">{cfg.icon}</div>
-                      <div className="font-bold text-sm text-slate-900 mb-1">{d.name}</div>
-                      <div className="text-2xl font-bold text-slate-900 mb-2">{d.total}<span className="text-xs text-slate-500 font-normal ml-1">tugas</span></div>
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-1">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: d.color }} />
-                      </div>
-                      <div className="text-xs text-slate-500 flex justify-between"><span>{cfg.members.length} anggota</span><span className="font-bold text-slate-700">{pct}%</span></div>
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           )}
 
@@ -389,7 +513,7 @@ export default function App() {
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Cari tugas..." className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
-                {[['division', Object.keys(DIVISIONS)], ['status', Object.keys(STATUS_CONFIG)], ['priority', Object.keys(PRIORITY_CONFIG)]].map(([key, opts]) => (
+                {[['division', Object.keys(divisions)], ['status', Object.keys(STATUS_CONFIG)], ['priority', Object.keys(PRIORITY_CONFIG)]].map(([key, opts]) => (
                   <select key={key} value={filters[key]} onChange={e => setFilters({...filters, [key]: e.target.value})} className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
                     <option value="All">Semua {key}</option>
                     {opts.map(o => <option key={o}>{o}</option>)}
@@ -418,7 +542,7 @@ export default function App() {
                           <tr key={t.id} onClick={() => { setModalTask(t); setModalOpen(true); }} className="border-b border-slate-100 hover:bg-orange-50 cursor-pointer transition-colors">
                             <td className="px-4 py-3 text-xs font-mono text-slate-500">{t.id}</td>
                             <td className="px-4 py-3"><div className="font-semibold text-slate-900 text-sm">{t.name}</div><div className="text-xs text-slate-500 line-clamp-1">{t.description}</div></td>
-                            <td className="px-4 py-3"><AssigneeAvatars assignees={t.assignees} /></td>
+                            <td className="px-4 py-3"><AssigneeAvatars assignees={t.assignees} divisions={divisions} /></td>
                             <td className="px-4 py-3 text-xs text-slate-700">{t.project}</td>
                             <td className="px-4 py-3"><PriorityBadge priority={t.priority} /></td>
                             <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
@@ -447,8 +571,8 @@ export default function App() {
 
           {view === 'team' && (
             <div className="space-y-4 max-w-[1200px]">
-              {Object.entries(DIVISIONS).map(([name, { members, color, icon }]) => {
-                const divTasks = tasks.filter(t => t.assignees.some(a => members.includes(a)));
+              {Object.entries(divisions).map(([name, { members, color, icon }]) => {
+                const divTasks = tasks.filter(t => t.assignees.some(a => members.map(m=>m.name).includes(a)));
                 return (
                   <div key={name} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3" style={{ backgroundColor: `${color}08` }}>
@@ -458,12 +582,12 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-0">
                       {members.map(member => {
-                        const mt = tasks.filter(t => t.assignees.includes(member));
+                        const mt = tasks.filter(t => t.assignees.includes(member.name));
                         return (
-                          <div key={member} className="p-4 border-r border-b border-slate-100 last:border-r-0">
+                          <div key={member.name} className="p-4 border-r border-b border-slate-100 last:border-r-0">
                             <div className="flex items-center gap-3 mb-2">
-                              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: color }}>{member[0]}</div>
-                              <div><div className="font-semibold text-slate-900 text-sm">{member}</div><div className="text-[10px] text-slate-500">{member.toLowerCase()}@company.com</div></div>
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: color }}>{member.name[0]}</div>
+                              <div><div className="font-semibold text-slate-900 text-sm">{member.name}</div><div className="text-[10px] text-slate-500">{member.email}</div></div>
                             </div>
                             <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
                               <span className="text-slate-500">Tugas: <span className="font-bold text-slate-900">{mt.length}</span></span>
@@ -481,7 +605,7 @@ export default function App() {
         </div>
       </main>
 
-      {modalOpen && <TaskModal task={modalTask} onClose={() => { setModalOpen(false); setModalTask(null); }} onSave={saveTask} onDelete={modalTask ? deleteTask : null} />}
+      {modalOpen && <TaskModal task={modalTask} onClose={() => { setModalOpen(false); setModalTask(null); }} onSave={saveTask} onDelete={modalTask ? deleteTask : null} divisions={divisions} />}
     </div>
   );
 }
