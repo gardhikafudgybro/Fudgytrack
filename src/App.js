@@ -24,14 +24,6 @@ const DIVISION_PREFIX = {
   HR: 'HR',
 };
 
-const generateId = (divisions, assignees) => {
-  if (!assignees || assignees.length === 0) return `TSK-${Date.now().toString().slice(-6)}`;
-  const firstAssignee = assignees[0];
-  const div = Object.entries(divisions).find(([, { members }]) => members.some(m => m.name === firstAssignee))?.[0];
-  const prefix = div ? (DIVISION_PREFIX[div] || 'TSK') : 'TSK';
-  return `${prefix}-${Date.now().toString().slice(-6)}`;
-};
-
 const DEFAULT_DIVISIONS = {
   Finance: { members: [
     { name: 'Dhika', email: 'gardhikafudgybro@gmail.com' },
@@ -75,19 +67,27 @@ const STATUS_CONFIG = {
 
 const PROJECTS = ['Website Redesign', 'Mobile App', 'Marketing Campaign', 'CRM Integration', 'Product Launch', 'Internal Tools', 'Financial Audit', 'Recruitment'];
 
+const generateId = (divisions, assignees) => {
+  if (!assignees || assignees.length === 0) return `TSK-${Date.now().toString().slice(-6)}`;
+  const firstAssignee = assignees[0];
+  const div = Object.entries(divisions).find(([, { members }]) => members.some(m => m.name === firstAssignee))?.[0];
+  const prefix = div ? (DIVISION_PREFIX[div] || 'TSK') : 'TSK';
+  return `${prefix}-${Date.now().toString().slice(-6)}`;
+};
+
 const seedTasks = () => {
   const addDays = (n) => { const x = new Date(); x.setDate(x.getDate() + n); return x.toISOString().split('T')[0]; };
   return [
-    { id: 'TSK-001', name: 'Laporan keuangan Q1 2026', description: 'Susun laporan keuangan lengkap untuk kuartal pertama', assignees: ['Dhika', 'Ilham'], project: 'Financial Audit', priority: 'Urgent', status: 'In Progress', progress: 65, startDate: addDays(-10), deadline: addDays(3) },
-    { id: 'TSK-002', name: 'Rekonsiliasi bank', description: 'Cek dan rekonsiliasi semua transaksi bank bulan Maret', assignees: ['Yafi', 'Hikmah'], project: 'Financial Audit', priority: 'High', status: 'Review', progress: 90, startDate: addDays(-15), deadline: addDays(2) },
-    { id: 'TSK-003', name: 'SOP gudang baru', description: 'Drafting SOP operasional gudang cabang Surabaya', assignees: ['Tito', 'Ivana'], project: 'Internal Tools', priority: 'Medium', status: 'In Progress', progress: 40, startDate: addDays(-5), deadline: addDays(10) },
-    { id: 'TSK-004', name: 'Quality check batch April', description: 'QC untuk batch produk April sebelum shipping', assignees: ['Ian', 'Dhanny'], project: 'Product Launch', priority: 'High', status: 'To Do', progress: 0, startDate: addDays(1), deadline: addDays(14) },
-    { id: 'TSK-005', name: 'Negosiasi vendor packaging', description: 'Cari harga terbaik untuk packaging baru', assignees: ['Fredy'], project: 'Product Launch', priority: 'High', status: 'In Progress', progress: 55, startDate: addDays(-7), deadline: addDays(5) },
-    { id: 'TSK-006', name: 'Kampanye Instagram Ramadhan', description: 'Konsep dan eksekusi campaign Ramadhan di IG', assignees: ['Ghina', 'Nasywa', 'Nabila'], project: 'Marketing Campaign', priority: 'Urgent', status: 'In Progress', progress: 75, startDate: addDays(-12), deadline: addDays(1) },
-    { id: 'TSK-007', name: 'Content plan April', description: 'Susun content calendar untuk bulan April', assignees: ['Ghina', 'Nabila'], project: 'Marketing Campaign', priority: 'Medium', status: 'Done', progress: 100, startDate: addDays(-20), deadline: addDays(-3) },
-    { id: 'TSK-008', name: 'Rekrut 3 developer', description: 'Proses hiring untuk posisi dev backend dan frontend', assignees: ['Musfita'], project: 'Recruitment', priority: 'High', status: 'In Progress', progress: 30, startDate: addDays(-8), deadline: addDays(21) },
-    { id: 'TSK-009', name: 'Onboarding karyawan baru', description: 'Siapkan materi & jadwal onboarding 2 orang baru', assignees: ['Musfita'], project: 'Internal Tools', priority: 'Medium', status: 'To Do', progress: 0, startDate: addDays(2), deadline: addDays(9) },
-    { id: 'TSK-010', name: 'Integrasi CRM dengan WhatsApp', description: 'Setup integrasi WA Business API ke CRM', assignees: ['Tito', 'Dhanny'], project: 'CRM Integration', priority: 'High', status: 'Blocked', progress: 45, startDate: addDays(-14), deadline: addDays(7) },
+    { id: 'FIN-001', name: 'Laporan keuangan Q1 2026', description: 'Susun laporan keuangan lengkap untuk kuartal pertama', assignees: ['Dhika', 'Ilham'], project: 'Financial Audit', priority: 'Urgent', status: 'In Progress', progress: 65, driveUrl: '', startDate: addDays(-10), deadline: addDays(3) },
+    { id: 'FIN-002', name: 'Rekonsiliasi bank', description: 'Cek dan rekonsiliasi semua transaksi bank bulan Maret', assignees: ['Yafi', 'Hikmah'], project: 'Financial Audit', priority: 'High', status: 'Review', progress: 90, driveUrl: '', startDate: addDays(-15), deadline: addDays(2) },
+    { id: 'OPS-001', name: 'SOP gudang baru', description: 'Drafting SOP operasional gudang cabang Surabaya', assignees: ['Tito', 'Ivana'], project: 'Internal Tools', priority: 'Medium', status: 'In Progress', progress: 40, driveUrl: '', startDate: addDays(-5), deadline: addDays(10) },
+    { id: 'OPS-002', name: 'Quality check batch April', description: 'QC untuk batch produk April sebelum shipping', assignees: ['Ian', 'Dhanny'], project: 'Product Launch', priority: 'High', status: 'To Do', progress: 0, driveUrl: '', startDate: addDays(1), deadline: addDays(14) },
+    { id: 'PUR-001', name: 'Negosiasi vendor packaging', description: 'Cari harga terbaik untuk packaging baru', assignees: ['Fredy'], project: 'Product Launch', priority: 'High', status: 'In Progress', progress: 55, driveUrl: '', startDate: addDays(-7), deadline: addDays(5) },
+    { id: 'MKT-001', name: 'Kampanye Instagram Ramadhan', description: 'Konsep dan eksekusi campaign Ramadhan di IG', assignees: ['Ghina', 'Nasywa', 'Nabila'], project: 'Marketing Campaign', priority: 'Urgent', status: 'In Progress', progress: 75, driveUrl: '', startDate: addDays(-12), deadline: addDays(1) },
+    { id: 'MKT-002', name: 'Content plan April', description: 'Susun content calendar untuk bulan April', assignees: ['Ghina', 'Nabila'], project: 'Marketing Campaign', priority: 'Medium', status: 'Done', progress: 100, driveUrl: '', startDate: addDays(-20), deadline: addDays(-3) },
+    { id: 'HR-001', name: 'Rekrut 3 developer', description: 'Proses hiring untuk posisi dev backend dan frontend', assignees: ['Musfita'], project: 'Recruitment', priority: 'High', status: 'In Progress', progress: 30, driveUrl: '', startDate: addDays(-8), deadline: addDays(21) },
+    { id: 'HR-002', name: 'Onboarding karyawan baru', description: 'Siapkan materi & jadwal onboarding 2 orang baru', assignees: ['Musfita'], project: 'Internal Tools', priority: 'Medium', status: 'To Do', progress: 0, driveUrl: '', startDate: addDays(2), deadline: addDays(9) },
+    { id: 'OPS-003', name: 'Integrasi CRM dengan WhatsApp', description: 'Setup integrasi WA Business API ke CRM', assignees: ['Tito', 'Dhanny'], project: 'CRM Integration', priority: 'High', status: 'Blocked', progress: 45, driveUrl: '', startDate: addDays(-14), deadline: addDays(7) },
   ];
 };
 
@@ -119,9 +119,8 @@ const AssigneeAvatars = ({ assignees, divisions, max = 3 }) => {
   );
 };
 
-// ─── Settings View ───────────────────────────────────────────────────────────
 const SettingsView = ({ divisions, setDivisions }) => {
-  const [editModal, setEditModal] = useState(null); // { divKey, memberIdx } or 'new'
+  const [editModal, setEditModal] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', division: Object.keys(divisions)[0] });
 
   const openEdit = (divKey, idx) => {
@@ -164,13 +163,13 @@ const SettingsView = ({ divisions, setDivisions }) => {
           <UserPlus size={15} /> Tambah Karyawan
         </button>
       </div>
-
       {Object.entries(divisions).map(([divKey, { members, color, icon }]) => (
         <div key={divKey} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2" style={{ backgroundColor: `${color}10` }}>
             <span className="text-lg">{icon}</span>
             <span className="font-bold text-slate-900">{divKey}</span>
-            <span className="text-xs text-slate-500 ml-1">({members.length} orang)</span>
+            <span className="text-xs text-slate-500 ml-1">· prefix: <span className="font-mono font-bold">{DIVISION_PREFIX[divKey]}</span></span>
+            <span className="text-xs text-slate-400 ml-1">({members.length} orang)</span>
           </div>
           <table className="w-full">
             <thead><tr className="bg-slate-50 border-b border-slate-100">
@@ -189,9 +188,7 @@ const SettingsView = ({ divisions, setDivisions }) => {
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">{m.email}</td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => openEdit(divKey, idx)} className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-slate-900">
-                      <Edit2 size={14} />
-                    </button>
+                    <button onClick={() => openEdit(divKey, idx)} className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-slate-900"><Edit2 size={14} /></button>
                   </td>
                 </tr>
               ))}
@@ -199,8 +196,6 @@ const SettingsView = ({ divisions, setDivisions }) => {
           </table>
         </div>
       ))}
-
-      {/* Edit/Add Modal */}
       {editModal !== null && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditModal(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
@@ -211,18 +206,15 @@ const SettingsView = ({ divisions, setDivisions }) => {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Nama</label>
-                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Nama lengkap..." />
+                <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Nama lengkap..." />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Email</label>
-                <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="email@perusahaan.com" />
+                <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="email@gmail.com" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Divisi</label>
-                <select value={form.division} onChange={e => setForm({...form, division: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                <select value={form.division} onChange={e => setForm({...form, division: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
                   {Object.entries(divisions).map(([k, { icon }]) => <option key={k} value={k}>{icon} {k}</option>)}
                 </select>
               </div>
@@ -238,7 +230,6 @@ const SettingsView = ({ divisions, setDivisions }) => {
   );
 };
 
-// ─── Task Modal ───────────────────────────────────────────────────────────────
 const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
   const allMembers = Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color })));
   const [form, setForm] = useState(task || {
@@ -258,13 +249,13 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
   const handleSubmit = () => {
     if (!form.name.trim()) { alert('Nama tugas wajib diisi'); return; }
     if (!form.assignees.length) { alert('Pilih minimal 1 assignee'); return; }
-    onSave(form);
+    onSave({ ...form, id: form.id || generateId(divisions, form.assignees) });
   };
 
   const sendEmail = () => {
     const to = form.assignees.map(n => allMembers.find(m => m.name === n)?.email).filter(Boolean).join(',');
     const sub = encodeURIComponent(`[Task] ${form.name}`);
-    const body = encodeURIComponent(`Halo,\n\nKamu di-assign ke tugas:\n\nID: ${form.id}\nNama: ${form.name}\nProject: ${form.project}\nPrioritas: ${form.priority}\nDeadline: ${formatDate(form.deadline)}\n\nTerima kasih.`);
+    const body = encodeURIComponent(`Halo,\n\nKamu di-assign ke tugas:\n\nID: ${form.id}\nNama: ${form.name}\nProject: ${form.project}\nPrioritas: ${form.priority}\nDeadline: ${formatDate(form.deadline)}${form.driveUrl ? `\nGoogle Drive: ${form.driveUrl}` : ''}\n\nTerima kasih.`);
     window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${sub}&body=${body}`, '_blank');
   };
 
@@ -272,7 +263,10 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <div><h2 className="text-lg font-bold text-slate-900">{task ? 'Edit Tugas' : 'Tugas Baru'}</h2><p className="text-xs text-slate-500 font-mono">{form.id}</p></div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">{task ? 'Edit Tugas' : 'Tugas Baru'}</h2>
+            <p className="text-xs text-slate-500 font-mono">{form.id || 'ID otomatis saat pilih assignee'}</p>
+          </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
         </div>
         <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
@@ -302,7 +296,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
               <div className="mt-2 border border-slate-200 rounded-lg max-h-48 overflow-y-auto bg-white">
                 {Object.entries(divisions).map(([div, { members, color, icon }]) => (
                   <div key={div}>
-                    <div className="px-3 py-1.5 bg-slate-50 text-xs font-bold text-slate-600 uppercase tracking-wide sticky top-0">{icon} {div}</div>
+                    <div className="px-3 py-1.5 bg-slate-50 text-xs font-bold text-slate-600 uppercase tracking-wide sticky top-0">{icon} {div} <span className="font-mono text-orange-500">·{DIVISION_PREFIX[div]}</span></div>
                     {members.map(m => (
                       <label key={m.name} className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 cursor-pointer border-t border-slate-100">
                         <input type="checkbox" checked={form.assignees.includes(m.name)} onChange={() => toggleAssignee(m.name)} className="accent-orange-500" />
@@ -343,20 +337,6 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
               <input type="range" min="0" max="100" step="5" value={form.progress} onChange={e => setForm({...form, progress: +e.target.value})} className="w-full mt-2 accent-orange-500" />
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Link Google Drive (opsional)</label>
-            <div className="flex gap-2 items-center">
-              <input type="url" value={form.driveUrl || ''} onChange={e => setForm({...form, driveUrl: e.target.value})}
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                placeholder="https://drive.google.com/..." />
-              {form.driveUrl && (
-                <a href={form.driveUrl} target="_blank" rel="noreferrer"
-                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium whitespace-nowrap">
-                  Buka →
-                </a>
-              )}
-            </div>
-          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Tanggal Mulai</label>
@@ -365,6 +345,17 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Deadline</label>
               <input type="date" value={form.deadline} onChange={e => setForm({...form, deadline: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Link Google Drive (opsional)</label>
+            <div className="flex gap-2 items-center">
+              <input type="url" value={form.driveUrl || ''} onChange={e => setForm({...form, driveUrl: e.target.value})}
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                placeholder="https://drive.google.com/..." />
+              {form.driveUrl && (
+                <a href={form.driveUrl} target="_blank" rel="noreferrer" className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium whitespace-nowrap">Buka →</a>
+              )}
             </div>
           </div>
         </div>
@@ -380,7 +371,6 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
   );
 };
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [tasks, setTasks] = useState([]);
   const [divisions, setDivisions] = useState(DEFAULT_DIVISIONS);
@@ -474,7 +464,7 @@ export default function App() {
             <button key={name} onClick={() => { setView('tasks'); setFilters(f => ({...f, division: name})); }}
               className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-slate-400 hover:bg-slate-800 hover:text-white">
               <span>{icon}</span><span className="flex-1 text-left">{name}</span>
-              <span className="text-[10px] opacity-60">{divisions[name].members.length}</span>
+              <span className="text-[10px] font-mono text-orange-400">{DIVISION_PREFIX[name]}</span>
             </button>
           ))}
         </div>
@@ -545,7 +535,7 @@ export default function App() {
               <div className="bg-white rounded-xl border border-slate-200 p-3 flex flex-wrap items-center gap-2">
                 <div className="relative flex-1 min-w-[200px]">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Cari tugas..." className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                  <input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Cari tugas atau ID..." className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
                 {[['division', Object.keys(divisions)], ['status', Object.keys(STATUS_CONFIG)], ['priority', Object.keys(PRIORITY_CONFIG)]].map(([key, opts]) => (
                   <select key={key} value={filters[key]} onChange={e => setFilters({...filters, [key]: e.target.value})} className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white">
@@ -561,32 +551,35 @@ export default function App() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead><tr className="bg-slate-50 border-b border-slate-200">
-                      {['ID', 'Tugas', 'Assignee', 'Project', 'Priority', 'Status', 'Progress', 'Deadline'].map(h => (
+                      {['ID', 'Tugas', 'Assignee', 'Project', 'Priority', 'Status', 'Progress', 'Drive', 'Deadline'].map(h => (
                         <th key={h} className="text-left px-4 py-3 text-[11px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
                       {filtered.length === 0 ? (
-                        <tr><td colSpan={8} className="text-center py-12 text-slate-400 text-sm">Tidak ada tugas.</td></tr>
+                        <tr><td colSpan={9} className="text-center py-12 text-slate-400 text-sm">Tidak ada tugas.</td></tr>
                       ) : filtered.map(t => {
                         const days = daysUntil(t.deadline);
                         const overdue = days < 0 && t.status !== 'Done';
                         const soon = days >= 0 && days <= 3 && t.status !== 'Done';
                         return (
                           <tr key={t.id} onClick={() => { setModalTask(t); setModalOpen(true); }} className="border-b border-slate-100 hover:bg-orange-50 cursor-pointer transition-colors">
-                            <td className="px-4 py-3 text-xs font-mono text-slate-500">{t.id}</td>
+                            <td className="px-4 py-3 text-xs font-mono font-bold text-orange-600">{t.id}</td>
                             <td className="px-4 py-3"><div className="font-semibold text-slate-900 text-sm">{t.name}</div><div className="text-xs text-slate-500 line-clamp-1">{t.description}</div></td>
                             <td className="px-4 py-3"><AssigneeAvatars assignees={t.assignees} divisions={divisions} /></td>
                             <td className="px-4 py-3 text-xs text-slate-700">{t.project}</td>
                             <td className="px-4 py-3"><PriorityBadge priority={t.priority} /></td>
                             <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
                             <td className="px-4 py-3">
-                              <div className="flex items-center gap-2 w-28">
+                              <div className="flex items-center gap-2 w-24">
                                 <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                   <div className="h-full rounded-full" style={{ width: `${t.progress}%`, backgroundColor: t.progress === 100 ? '#10B981' : '#F97316' }} />
                                 </div>
                                 <span className="text-xs font-semibold text-slate-700 w-8">{t.progress}%</span>
                               </div>
+                            </td>
+                            <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                              {t.driveUrl ? <a href={t.driveUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline font-medium">Buka →</a> : <span className="text-xs text-slate-300">-</span>}
                             </td>
                             <td className={`px-4 py-3 text-xs font-medium ${overdue ? 'text-red-600' : soon ? 'text-orange-600' : 'text-slate-700'}`}>
                               {formatDate(t.deadline)}
@@ -611,7 +604,10 @@ export default function App() {
                   <div key={name} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3" style={{ backgroundColor: `${color}08` }}>
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ backgroundColor: `${color}20` }}>{icon}</div>
-                      <div className="flex-1"><h3 className="font-bold text-slate-900">{name}</h3><p className="text-xs text-slate-500">{members.length} anggota · {divTasks.length} tugas</p></div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-slate-900">{name} <span className="font-mono text-xs text-orange-500 font-normal">{DIVISION_PREFIX[name]}</span></h3>
+                        <p className="text-xs text-slate-500">{members.length} anggota · {divTasks.length} tugas</p>
+                      </div>
                       <button onClick={() => { setView('tasks'); setFilters(f => ({...f, division: name})); }} className="text-xs font-semibold px-3 py-1.5 rounded-md hover:bg-white transition" style={{ color }}>Lihat tugas →</button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-0">
