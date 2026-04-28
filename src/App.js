@@ -124,6 +124,10 @@ const AssigneeAvatars = ({ assignees, divisions, max = 3 }) => {
 };
 
 // ─── Login Page ───────────────────────────────────────────────────────────────
+const FUDGY_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60'%3E%3Crect width='100' height='60' rx='12' fill='%23f5e6d3'/%3E%3Cellipse cx='50' cy='35' rx='38' ry='16' fill='%23c9956a'/%3E%3Cellipse cx='50' cy='30' rx='38' ry='14' fill='%23e8c49a'/%3E%3Cellipse cx='50' cy='28' rx='34' ry='10' fill='%23d4a574'/%3E%3Ccircle cx='35' cy='28' r='3' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='50' cy='26' r='2.5' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='63' cy='29' r='2' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='42' cy='32' r='2' fill='%23b8845a' opacity='0.5'/%3E%3Ccircle cx='57' cy='31' r='2.5' fill='%23b8845a' opacity='0.5'/%3E%3C/svg%3E";
+
+const BG_ICONS = ['💰','📢','👥','⚙️','🛒','📊','📋','✅','🎯','📈','🗂️','⏰','📌','🔔','💼'];
+
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -139,36 +143,67 @@ const LoginPage = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-pink-600 rounded-2xl flex items-center justify-center font-bold text-white text-2xl mx-auto mb-4 shadow-lg">F</div>
-          <h1 className="text-2xl font-bold text-white">FudgyTrack</h1>
-          <p className="text-slate-400 text-sm mt-1">Team Task Management</p>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ backgroundColor: '#f5ede0' }}>
+      {/* Background icons grid */}
+      <div className="absolute inset-0 pointer-events-none select-none" style={{ opacity: 0.13 }}>
+        {Array.from({ length: 80 }).map((_, i) => (
+          <span key={i} className="absolute text-2xl" style={{
+            left: `${(i % 10) * 10 + 2}%`,
+            top: `${Math.floor(i / 10) * 12 + 2}%`,
+            color: '#a0522d',
+            transform: `rotate(${(i * 17) % 30 - 15}deg)`,
+          }}>{BG_ICONS[i % BG_ICONS.length]}</span>
+        ))}
+      </div>
+
+      <div className="w-full max-w-sm relative z-10">
+        {/* Divisi icons */}
+        <div className="flex justify-center gap-6 mb-6">
+          {[['💰','FINANCE'],['📢','MARKETING'],['👥','HR'],['⚙️','OPERATION'],['🛒','PURCHASING']].map(([icon, label]) => (
+            <div key={label} className="flex flex-col items-center gap-1 opacity-70">
+              <span className="text-2xl">{icon}</span>
+              <span className="text-[9px] font-bold tracking-wider" style={{ color: '#a0522d' }}>{label}</span>
+            </div>
+          ))}
         </div>
-        <div className="bg-white rounded-2xl shadow-2xl p-6 space-y-4">
+
+        {/* Logo fudgybro */}
+        <div className="text-center mb-6">
+          <div className="w-20 h-12 mx-auto mb-3 rounded-2xl overflow-hidden shadow-lg">
+            <img src={FUDGY_LOGO} alt="FudgyTrack" className="w-full h-full object-cover" />
+          </div>
+          <h1 className="text-2xl font-bold" style={{ color: '#6b3a1f' }}>FudgyTrack</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#a0522d' }}>Team Task Management</p>
+        </div>
+
+        {/* Login card */}
+        <div className="bg-white/90 backdrop-blur rounded-2xl shadow-2xl p-6 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Email</label>
+            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6b3a1f' }}>Email</label>
             <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }}
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2"
+              style={{ borderColor: '#d4a574', focusRingColor: '#c9956a' }}
               placeholder="email@gmail.com" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Password</label>
+            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6b3a1f' }}>Password</label>
             <div className="relative">
               <input type={showPw ? 'text' : 'password'} value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 pr-16"
-                placeholder="namaanda123" />
-              <button onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700">{showPw ? 'Sembunyikan' : 'Tampilkan'}</button>
+                className="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 pr-24"
+                style={{ borderColor: '#d4a574' }}
+                placeholder="••••••••" />
+              <button onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium" style={{ color: '#a0522d' }}>{showPw ? 'Sembunyikan' : 'Tampilkan'}</button>
             </div>
           </div>
           {error && <p className="text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <button onClick={handleLogin} className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors">
+          <button onClick={handleLogin} className="w-full py-2.5 text-white rounded-lg text-sm font-semibold transition-colors"
+            style={{ backgroundColor: '#c9956a' }}
+            onMouseEnter={e => e.target.style.backgroundColor='#b8845a'}
+            onMouseLeave={e => e.target.style.backgroundColor='#c9956a'}>
             Masuk
           </button>
-          <p className="text-[11px] text-slate-400 text-center">Password: nama kamu + 123 &nbsp;·&nbsp; Contoh: <span className="font-mono font-semibold">yafi123</span></p>
         </div>
       </div>
     </div>
