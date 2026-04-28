@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "firebase/firestore";
-import { LayoutDashboard, ListTodo, Users, Plus, Search, X, Mail, Trash2, ChevronDown, AlertCircle, CheckCircle2, Clock, PauseCircle, Circle, TrendingUp, Zap, Settings, Edit2, UserPlus, Lock, PlusCircle, LogOut } from "lucide-react";
+import { LayoutDashboard, ListTodo, Users, Plus, Search, X, Mail, Trash2, ChevronDown, AlertCircle, CheckCircle2, Clock, PauseCircle, Circle, TrendingUp, Zap, Settings, Edit2, UserPlus, Lock, PlusCircle, LogOut, Bell } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const firebaseConfig = {
@@ -25,7 +25,7 @@ const DIVISION_PREFIX = {
 };
 
 const DEFAULT_DIVISIONS = {
-  Manajemen: { members: [{ name: 'Owner', email: 'gardhikafudgybro@gmail.com' }], color: '#6366F1', icon: '👑' },
+  Manajemen: { members: [{ name: 'Abys', email: 'abiyasa@fudgybro.com' }], color: '#6366F1', icon: '👑' },
   Finance: { members: [
     { name: 'Dhika', email: 'gardhikafudgybro@gmail.com' },
     { name: 'Ilham', email: 'ilhamhaqiqi21@gmail.com' },
@@ -47,14 +47,13 @@ const DEFAULT_DIVISIONS = {
   HR: { members: [{ name: 'Musfita', email: 'muspitarohmi@gmail.com' }], color: '#8B5CF6', icon: '👥' },
 };
 
-// Build credential map: email → { name, password }
 const buildCredentials = (divisions) => {
   const creds = {};
   Object.values(divisions).forEach(({ members }) => {
     members.forEach(m => {
       creds[m.email.toLowerCase()] = {
         name: m.name,
-        password: `${m.name.toLowerCase()}123`,
+        password: m.name === 'Abys' ? 'Abys123' : `${m.name.toLowerCase()}123`,
       };
     });
   });
@@ -123,9 +122,67 @@ const AssigneeAvatars = ({ assignees, divisions, max = 3 }) => {
   );
 };
 
-// ─── Login Page ───────────────────────────────────────────────────────────────
-const FUDGY_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60'%3E%3Crect width='100' height='60' rx='12' fill='%23f5e6d3'/%3E%3Cellipse cx='50' cy='35' rx='38' ry='16' fill='%23c9956a'/%3E%3Cellipse cx='50' cy='30' rx='38' ry='14' fill='%23e8c49a'/%3E%3Cellipse cx='50' cy='28' rx='34' ry='10' fill='%23d4a574'/%3E%3Ccircle cx='35' cy='28' r='3' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='50' cy='26' r='2.5' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='63' cy='29' r='2' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='42' cy='32' r='2' fill='%23b8845a' opacity='0.5'/%3E%3Ccircle cx='57' cy='31' r='2.5' fill='%23b8845a' opacity='0.5'/%3E%3C/svg%3E";
+// ─── Inbox ────────────────────────────────────────────────────────────────────
+const generateNotifications = (tasks, currentUser) => {
+  if (!currentUser) return [];
+  const notifs = [];
+  const today = new Date(); today.setHours(0,0,0,0);
 
+  tasks.forEach(t => {
+    if (!t.assignees.includes(currentUser.name)) return;
+    const deadlineDate = new Date(t.deadline); deadlineDate.setHours(0,0,0,0);
+    const daysLeft = Math.ceil((deadlineDate - today) / 86400000);
+
+    notifs.push({ id: `assign-${t.id}`, type: 'assign', icon: '📌', color: '#3B82F6', title: 'Kamu di-assign ke tugas', body: t.name, taskId: t.id, time: t.startDate });
+
+    if (t.startDate === todayStr()) notifs.push({ id: `start-${t.id}`, type: 'start', icon: '🚀', color: '#10B981', title: 'Tugas mulai hari ini', body: t.name, taskId: t.id, time: t.startDate });
+
+    if (daysLeft <= 7 && daysLeft > 0 && t.status !== 'Done') notifs.push({ id: `deadline-${t.id}`, type: 'deadline', icon: '⏰', color: daysLeft <= 3 ? '#EF4444' : '#F59E0B', title: `Deadline H-${daysLeft}`, body: t.name, taskId: t.id, time: t.deadline });
+
+    if (daysLeft < 0 && t.status !== 'Done') notifs.push({ id: `overdue-${t.id}`, type: 'overdue', icon: '🚨', color: '#EF4444', title: `Tugas terlambat ${Math.abs(daysLeft)} hari`, body: t.name, taskId: t.id, time: t.deadline });
+  });
+
+  const order = { overdue: 0, deadline: 1, start: 2, assign: 3 };
+  return notifs.sort((a, b) => order[a.type] - order[b.type]);
+};
+
+const InboxPanel = ({ notifications, onClose, onTaskClick, readIds, markRead }) => (
+  <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
+    <div className="w-full max-w-sm bg-white shadow-2xl flex flex-col h-full" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+        <div><h2 className="font-bold text-slate-900">Inbox</h2><p className="text-xs text-slate-500">{notifications.filter(n => !readIds.has(n.id)).length} belum dibaca</p></div>
+        <div className="flex items-center gap-2">
+          {notifications.length > 0 && <button onClick={() => markRead()} className="text-xs text-orange-500 hover:text-orange-700 font-medium">Tandai semua dibaca</button>}
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg"><X size={16} /></button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400"><span className="text-4xl">📭</span><p className="text-sm">Tidak ada notifikasi</p></div>
+        ) : notifications.map(n => {
+          const isRead = readIds.has(n.id);
+          return (
+            <div key={n.id} onClick={() => { onTaskClick(n.taskId); markRead(n.id); }}
+              className={`flex items-start gap-3 px-5 py-3.5 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors ${!isRead ? 'bg-orange-50/60' : ''}`}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0" style={{ backgroundColor: `${n.color}20` }}>{n.icon}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-semibold text-slate-800">{n.title}</p>
+                  {!isRead && <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-1" />}
+                </div>
+                <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{n.body}</p>
+                <p className="text-[10px] font-mono text-slate-400 mt-0.5">{n.taskId} · {formatDate(n.time)}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+const FUDGY_LOGO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60'%3E%3Crect width='100' height='60' rx='12' fill='%23f5e6d3'/%3E%3Cellipse cx='50' cy='35' rx='38' ry='16' fill='%23c9956a'/%3E%3Cellipse cx='50' cy='30' rx='38' ry='14' fill='%23e8c49a'/%3E%3Cellipse cx='50' cy='28' rx='34' ry='10' fill='%23d4a574'/%3E%3Ccircle cx='35' cy='28' r='3' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='50' cy='26' r='2.5' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='63' cy='29' r='2' fill='%23b8845a' opacity='0.6'/%3E%3Ccircle cx='42' cy='32' r='2' fill='%23b8845a' opacity='0.5'/%3E%3Ccircle cx='57' cy='31' r='2.5' fill='%23b8845a' opacity='0.5'/%3E%3C/svg%3E";
 const BG_ICONS = ['💰','📢','👥','⚙️','🛒','📊','📋','✅','🎯','📈','🗂️','⏰','📌','🔔','💼'];
 
 const LoginPage = ({ onLogin }) => {
@@ -144,20 +201,12 @@ const LoginPage = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ backgroundColor: '#f5ede0' }}>
-      {/* Background icons grid */}
       <div className="absolute inset-0 pointer-events-none select-none" style={{ opacity: 0.13 }}>
         {Array.from({ length: 80 }).map((_, i) => (
-          <span key={i} className="absolute text-2xl" style={{
-            left: `${(i % 10) * 10 + 2}%`,
-            top: `${Math.floor(i / 10) * 12 + 2}%`,
-            color: '#a0522d',
-            transform: `rotate(${(i * 17) % 30 - 15}deg)`,
-          }}>{BG_ICONS[i % BG_ICONS.length]}</span>
+          <span key={i} className="absolute text-2xl" style={{ left: `${(i % 10) * 10 + 2}%`, top: `${Math.floor(i / 10) * 12 + 2}%`, color: '#a0522d', transform: `rotate(${(i * 17) % 30 - 15}deg)` }}>{BG_ICONS[i % BG_ICONS.length]}</span>
         ))}
       </div>
-
       <div className="w-full max-w-sm relative z-10">
-        {/* Divisi icons */}
         <div className="flex justify-center gap-6 mb-6">
           {[['💰','FINANCE'],['📢','MARKETING'],['👥','HR'],['⚙️','OPERATION'],['🛒','PURCHASING']].map(([icon, label]) => (
             <div key={label} className="flex flex-col items-center gap-1 opacity-70">
@@ -166,8 +215,6 @@ const LoginPage = ({ onLogin }) => {
             </div>
           ))}
         </div>
-
-        {/* Logo fudgybro */}
         <div className="text-center mb-6">
           <div className="w-20 h-12 mx-auto mb-3 rounded-2xl overflow-hidden shadow-lg">
             <img src={FUDGY_LOGO} alt="FudgyTrack" className="w-full h-full object-cover" />
@@ -175,49 +222,36 @@ const LoginPage = ({ onLogin }) => {
           <h1 className="text-2xl font-bold" style={{ color: '#6b3a1f' }}>FudgyTrack</h1>
           <p className="text-sm mt-0.5" style={{ color: '#a0522d' }}>Team Task Management</p>
         </div>
-
-        {/* Login card */}
         <div className="bg-white/90 backdrop-blur rounded-2xl shadow-2xl p-6 space-y-4">
           <div>
             <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6b3a1f' }}>Email</label>
-            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              className="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2"
-              style={{ borderColor: '#d4a574', focusRingColor: '#c9956a' }}
-              placeholder="email@gmail.com" />
+            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }} onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              className="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2" style={{ borderColor: '#d4a574' }} placeholder="email@gmail.com" />
           </div>
           <div>
             <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6b3a1f' }}>Password</label>
             <div className="relative">
-              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                className="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 pr-24"
-                style={{ borderColor: '#d4a574' }}
-                placeholder="••••••••" />
+              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => { setPassword(e.target.value); setError(''); }} onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                className="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 pr-24" style={{ borderColor: '#d4a574' }} placeholder="••••••••" />
               <button onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium" style={{ color: '#a0522d' }}>{showPw ? 'Sembunyikan' : 'Tampilkan'}</button>
             </div>
           </div>
           {error && <p className="text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <button onClick={handleLogin} className="w-full py-2.5 text-white rounded-lg text-sm font-semibold transition-colors"
-            style={{ backgroundColor: '#c9956a' }}
-            onMouseEnter={e => e.target.style.backgroundColor='#b8845a'}
-            onMouseLeave={e => e.target.style.backgroundColor='#c9956a'}>
-            Masuk
-          </button>
+          <button onClick={handleLogin} className="w-full py-2.5 text-white rounded-lg text-sm font-semibold" style={{ backgroundColor: '#c9956a' }}
+            onMouseEnter={e => e.target.style.backgroundColor='#b8845a'} onMouseLeave={e => e.target.style.backgroundColor='#c9956a'}>Masuk</button>
         </div>
       </div>
     </div>
   );
 };
 
-// ─── Settings View ────────────────────────────────────────────────────────────
+// ─── Settings ─────────────────────────────────────────────────────────────────
 const SettingsView = ({ divisions, setDivisions }) => {
   const [editModal, setEditModal] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', division: Object.keys(divisions)[0] });
 
   const openEdit = (divKey, idx) => { const m = divisions[divKey].members[idx]; setForm({ name: m.name, email: m.email, division: divKey }); setEditModal({ divKey, idx }); };
   const openNew = () => { setForm({ name: '', email: '', division: Object.keys(divisions)[0] }); setEditModal('new'); };
-
   const saveEdit = () => {
     if (!form.name.trim() || !form.email.trim()) { alert('Nama dan email wajib diisi'); return; }
     const updated = JSON.parse(JSON.stringify(divisions));
@@ -250,7 +284,7 @@ const SettingsView = ({ divisions, setDivisions }) => {
                 <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: color }}>{m.name[0]}</div><span className="text-sm font-semibold text-slate-900">{m.name}</span></div></td>
                   <td className="px-4 py-3 text-sm text-slate-600">{m.email}</td>
-                  <td className="px-4 py-3 text-sm font-mono text-slate-400">{m.name.toLowerCase()}123</td>
+                  <td className="px-4 py-3 text-sm font-mono text-slate-400">{m.name === 'Abys' ? 'Abys123' : `${m.name.toLowerCase()}123`}</td>
                   <td className="px-4 py-3 text-right"><button onClick={() => openEdit(divKey, idx)} className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500"><Edit2 size={14} /></button></td>
                 </tr>
               ))}
@@ -266,7 +300,7 @@ const SettingsView = ({ divisions, setDivisions }) => {
               <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Nama</label><input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" /></div>
               <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Email</label><input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" /></div>
               <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Divisi</label><select value={form.division} onChange={e => setForm({...form, division: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">{Object.entries(divisions).map(([k, { icon }]) => <option key={k} value={k}>{icon} {k}</option>)}</select></div>
-              <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-500">🔑 Password otomatis: <span className="font-mono font-bold text-slate-700">{form.name ? `${form.name.toLowerCase()}123` : 'nama123'}</span></div>
+              <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-500">🔑 Password: <span className="font-mono font-bold text-slate-700">{form.name ? `${form.name.toLowerCase()}123` : 'nama123'}</span></div>
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
               <button onClick={() => setEditModal(null)} className="px-4 py-2 text-slate-700 hover:bg-slate-200 rounded-lg text-sm">Batal</button>
@@ -294,8 +328,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions, currentUser }) 
 
   const toggleAssignee = name => setForm(f => {
     const newA = f.assignees.includes(name) ? f.assignees.filter(n => n !== name) : [...f.assignees, name];
-    const id = !task ? `${DIVISION_PREFIX[f.division] || 'TSK'}-${Date.now().toString().slice(-6)}` : f.id;
-    return { ...f, assignees: newA, id };
+    return { ...f, assignees: newA, id: !task ? `${DIVISION_PREFIX[f.division] || 'TSK'}-${Date.now().toString().slice(-6)}` : f.id };
   });
 
   const addUpdate = () => {
@@ -309,7 +342,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions, currentUser }) 
   const handleSubmit = () => {
     if (!form.name.trim()) { alert('Nama tugas wajib diisi'); return; }
     if (!form.assignees.length) { alert('Pilih minimal 1 assignee'); return; }
-    onSave({ ...form, id: form.id || generateId(divisions, form.assignees) });
+    onSave({ ...form, id: form.id || `${DIVISION_PREFIX[form.division] || 'TSK'}-${Date.now().toString().slice(-6)}` });
   };
 
   const sendEmail = () => {
@@ -323,7 +356,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions, currentUser }) 
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <div><h2 className="text-lg font-bold text-slate-900">{task ? 'Edit Tugas' : 'Tugas Baru'}</h2><p className="text-xs text-slate-500 font-mono">{form.id || 'ID otomatis saat pilih assignee'}</p></div>
+          <div><h2 className="text-lg font-bold text-slate-900">{task ? 'Edit Tugas' : 'Tugas Baru'}</h2><p className="text-xs text-slate-500 font-mono">{form.id || 'ID otomatis saat pilih divisi'}</p></div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X size={18} /></button>
         </div>
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -340,15 +373,16 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions, currentUser }) 
                     onClick={() => setForm(f => ({ ...f, division: key, id: !task ? `${DIVISION_PREFIX[key]}-${Date.now().toString().slice(-6)}` : f.id }))}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all"
                     style={{ borderColor: active ? color : '#e2e8f0', backgroundColor: active ? color : 'transparent', color: active ? '#fff' : '#64748b' }}>
-                    {icon} {key}
-                    {active && <span className="font-mono text-[10px] opacity-80">·{DIVISION_PREFIX[key]}</span>}
+                    {icon} {key} {active && <span className="font-mono text-[10px] opacity-80">·{DIVISION_PREFIX[key]}</span>}
                   </button>
                 );
               })}
             </div>
           </div>
+
           <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Deskripsi</label><textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" rows={2} /></div>
 
+          {/* Assignee */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Assignee</label>
             <button onClick={() => setAssigneeOpen(!assigneeOpen)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-left text-sm flex items-center justify-between hover:bg-slate-50">
@@ -451,13 +485,33 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [modalTask, setModalTask] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [filters, setFilters] = useState({ search: '', division: 'All', status: 'All', priority: 'All' });
+  const [filters, setFilters] = useState({ search: '', division: 'All', status: 'All', priority: 'All', urgent: false });
+  const [sort, setSort] = useState({ key: null, dir: 'asc' });
   const [settingsUnlocked, setSettingsUnlocked] = useState(false);
   const [pwModal, setPwModal] = useState(false);
   const [pwInput, setPwInput] = useState('');
   const [pwError, setPwError] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [readIds, setReadIds] = useState(new Set());
 
   const allMembers = useMemo(() => Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color }))), [divisions]);
+  const notifications = useMemo(() => generateNotifications(tasks, currentUser), [tasks, currentUser]);
+  const unreadCount = notifications.filter(n => !readIds.has(n.id)).length;
+
+  const markRead = (id) => {
+    if (id) setReadIds(prev => new Set([...prev, id]));
+    else setReadIds(new Set(notifications.map(n => n.id)));
+  };
+
+  const handleTaskClick = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) { setModalTask(task); setModalOpen(true); setInboxOpen(false); }
+  };
+
+  const toggleSort = (key) => setSort(s => ({ key, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }));
+
+  const PRIORITY_ORDER = { Urgent: 0, High: 1, Medium: 2, Low: 3 };
+  const STATUS_ORDER = { Blocked: 0, 'In Progress': 1, 'To Do': 2, Review: 3, Done: 4 };
 
   useEffect(() => {
     if (!currentUser) return;
@@ -478,12 +532,10 @@ export default function App() {
 
   const handleLogin = (user) => { setCurrentUser(user); setLoading(true); };
   const handleLogout = () => { setCurrentUser(null); setView('dashboard'); setSettingsUnlocked(false); };
-
   const handleSettingsClick = () => {
     if (settingsUnlocked) { setView('settings'); return; }
     setPwModal(true); setPwInput(''); setPwError(false);
   };
-
   const submitPassword = () => {
     if (pwInput === SETTINGS_PASSWORD) { setSettingsUnlocked(true); setPwModal(false); setView('settings'); }
     else setPwError(true);
@@ -497,8 +549,28 @@ export default function App() {
     if (filters.division !== 'All' && !t.assignees.some(a => divisions[filters.division]?.members.map(m=>m.name).includes(a))) return false;
     if (filters.status !== 'All' && t.status !== filters.status) return false;
     if (filters.priority !== 'All' && t.priority !== filters.priority) return false;
+    if (filters.urgent && !['Urgent', 'High'].includes(t.priority)) return false;
     return true;
   }), [tasks, filters, divisions]);
+
+  const sorted = useMemo(() => {
+    if (!sort.key) return filtered;
+    return [...filtered].sort((a, b) => {
+      let va, vb;
+      if (sort.key === 'id') { va = a.id; vb = b.id; }
+      else if (sort.key === 'name') { va = a.name; vb = b.name; }
+      else if (sort.key === 'project') { va = a.project || ''; vb = b.project || ''; }
+      else if (sort.key === 'priority') { va = PRIORITY_ORDER[a.priority]; vb = PRIORITY_ORDER[b.priority]; }
+      else if (sort.key === 'status') { va = STATUS_ORDER[a.status]; vb = STATUS_ORDER[b.status]; }
+      else if (sort.key === 'progress') { va = a.progress; vb = b.progress; }
+      else if (sort.key === 'deadline') { va = new Date(a.deadline); vb = new Date(b.deadline); }
+      else if (sort.key === 'update') { va = a.updates?.length ? new Date(a.updates[a.updates.length-1].date) : new Date(0); vb = b.updates?.length ? new Date(b.updates[b.updates.length-1].date) : new Date(0); }
+      else if (sort.key === 'drive') { va = a.driveUrl ? 1 : 0; vb = b.driveUrl ? 1 : 0; }
+      if (va < vb) return sort.dir === 'asc' ? -1 : 1;
+      if (va > vb) return sort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filtered, sort]);
 
   const stats = useMemo(() => {
     const total = tasks.length, done = tasks.filter(t => t.status === 'Done').length;
@@ -540,7 +612,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* User info */}
         <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">{currentUser.name[0]}</div>
           <div className="flex-1 min-w-0"><div className="text-xs font-semibold text-white truncate">{currentUser.name}</div><div className="text-[10px] text-slate-500 truncate">{currentUser.email}</div></div>
@@ -552,10 +623,16 @@ export default function App() {
             const Icon = item.icon; const active = view === item.id;
             return <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-orange-500 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><Icon size={16} />{item.label}</button>;
           })}
+          <button onClick={() => setInboxOpen(true)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:bg-slate-800 hover:text-white">
+            <div className="relative"><Bell size={16} />{unreadCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}</div>
+            Inbox
+            {unreadCount > 0 && <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
+          </button>
           <button onClick={handleSettingsClick} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'settings' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
             {settingsUnlocked ? <Settings size={16} /> : <Lock size={16} />} Settings
           </button>
         </nav>
+
         <div className="p-3 border-t border-slate-800">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-3">Divisi</div>
           {Object.entries(divisions).map(([name, { icon }]) => (
@@ -637,22 +714,33 @@ export default function App() {
                     {opts.map(o => <option key={o}>{o}</option>)}
                   </select>
                 ))}
-                {(filters.search || filters.division !== 'All' || filters.status !== 'All' || filters.priority !== 'All') && (
-                  <button onClick={() => setFilters({ search: '', division: 'All', status: 'All', priority: 'All' })} className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg inline-flex items-center gap-1"><X size={14} /> Reset</button>
+                <button onClick={() => setFilters(f => ({ ...f, urgent: !f.urgent, priority: 'All' }))}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all ${filters.urgent ? 'bg-red-500 text-white border-red-500' : 'bg-white text-red-500 border-red-300 hover:bg-red-50'}`}>
+                  🔥 Urgent & High
+                </button>
+                {(filters.search || filters.division !== 'All' || filters.status !== 'All' || filters.priority !== 'All' || filters.urgent) && (
+                  <button onClick={() => setFilters({ search: '', division: 'All', status: 'All', priority: 'All', urgent: false })} className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg inline-flex items-center gap-1"><X size={14} /> Reset</button>
                 )}
               </div>
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead><tr className="bg-slate-50 border-b border-slate-200">
-                      {['ID', 'Tugas', 'Assignee', 'Project', 'Priority', 'Status', 'Progress', 'Drive', 'Update Terakhir', 'Deadline'].map(h => (
-                        <th key={h} className="text-left px-4 py-3 text-[11px] font-bold text-slate-600 uppercase tracking-wider">{h}</th>
+                      {[
+                        { label: 'ID', key: 'id' }, { label: 'Tugas', key: 'name' }, { label: 'Assignee', key: null },
+                        { label: 'Project', key: 'project' }, { label: 'Priority', key: 'priority' }, { label: 'Status', key: 'status' },
+                        { label: 'Progress', key: 'progress' }, { label: 'Drive', key: 'drive' }, { label: 'Update Terakhir', key: 'update' }, { label: 'Deadline', key: 'deadline' },
+                      ].map(({ label, key }) => (
+                        <th key={label} onClick={() => key && toggleSort(key)}
+                          className={`text-left px-4 py-3 text-[11px] font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap ${key ? 'cursor-pointer hover:bg-slate-100 select-none' : ''}`}>
+                          <span className="inline-flex items-center gap-1">{label}{key && <span className="text-slate-400 text-[10px]">{sort.key === key ? (sort.dir === 'asc' ? '▲' : '▼') : '⇅'}</span>}</span>
+                        </th>
                       ))}
                     </tr></thead>
                     <tbody>
-                      {filtered.length === 0 ? (
+                      {sorted.length === 0 ? (
                         <tr><td colSpan={10} className="text-center py-12 text-slate-400 text-sm">Tidak ada tugas.</td></tr>
-                      ) : filtered.map(t => {
+                      ) : sorted.map(t => {
                         const days = daysUntil(t.deadline);
                         const overdue = days < 0 && t.status !== 'Done';
                         const soon = days >= 0 && days <= 3 && t.status !== 'Done';
@@ -719,7 +807,8 @@ export default function App() {
         </div>
       </main>
 
-      {/* Password Modal */}
+      {inboxOpen && <InboxPanel notifications={notifications} onClose={() => setInboxOpen(false)} onTaskClick={handleTaskClick} readIds={readIds} markRead={markRead} />}
+
       {pwModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPwModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
@@ -729,9 +818,7 @@ export default function App() {
               <p className="text-xs text-slate-500 mt-1">Masukkan password untuk akses Settings</p>
             </div>
             <div className="px-6 pb-6 space-y-3">
-              <input type="password" value={pwInput} onChange={e => { setPwInput(e.target.value); setPwError(false); }}
-                onKeyDown={e => e.key === 'Enter' && submitPassword()}
-                placeholder="Password..." autoFocus
+              <input type="password" value={pwInput} onChange={e => { setPwInput(e.target.value); setPwError(false); }} onKeyDown={e => e.key === 'Enter' && submitPassword()} placeholder="Password..." autoFocus
                 className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${pwError ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
               {pwError && <p className="text-xs text-red-500 font-medium">Password salah.</p>}
               <button onClick={submitPassword} className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold">Masuk</button>
