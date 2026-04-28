@@ -284,7 +284,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions, currentUser }) 
   const allMembers = Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color })));
   const [form, setForm] = useState(task ? { ...task, updates: task.updates || [] } : {
     id: '', name: '', description: '', driveUrl: '',
-    assignees: [], project: '', priority: 'Medium', status: 'To Do', progress: 0,
+    assignees: [], division: Object.keys(divisions)[0], project: '', priority: 'Medium', status: 'To Do', progress: 0,
     startDate: new Date().toISOString().split('T')[0],
     deadline: new Date(Date.now() + 7*86400000).toISOString().split('T')[0],
     updates: [],
@@ -294,7 +294,8 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions, currentUser }) 
 
   const toggleAssignee = name => setForm(f => {
     const newA = f.assignees.includes(name) ? f.assignees.filter(n => n !== name) : [...f.assignees, name];
-    return { ...f, assignees: newA, id: !task ? generateId(divisions, newA) : f.id };
+    const id = !task ? `${DIVISION_PREFIX[f.division] || 'TSK'}-${Date.now().toString().slice(-6)}` : f.id;
+    return { ...f, assignees: newA, id };
   });
 
   const addUpdate = () => {
@@ -327,6 +328,25 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions, currentUser }) 
         </div>
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Nama Tugas</label><input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Nama tugas..." /></div>
+
+          {/* Divisi */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Divisi</label>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(divisions).map(([key, { color, icon }]) => {
+                const active = form.division === key;
+                return (
+                  <button key={key} type="button"
+                    onClick={() => setForm(f => ({ ...f, division: key, id: !task ? `${DIVISION_PREFIX[key]}-${Date.now().toString().slice(-6)}` : f.id }))}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all"
+                    style={{ borderColor: active ? color : '#e2e8f0', backgroundColor: active ? color : 'transparent', color: active ? '#fff' : '#64748b' }}>
+                    {icon} {key}
+                    {active && <span className="font-mono text-[10px] opacity-80">·{DIVISION_PREFIX[key]}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Deskripsi</label><textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" rows={2} /></div>
 
           <div>
