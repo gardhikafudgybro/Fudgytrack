@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "firebase/firestore";
-import { LayoutDashboard, ListTodo, Users, Plus, Search, X, Mail, Trash2, ChevronDown, AlertCircle, CheckCircle2, Clock, PauseCircle, Circle, TrendingUp, Zap, Settings, Edit2, UserPlus, Lock, PlusCircle } from "lucide-react";
+import { LayoutDashboard, ListTodo, Users, Plus, Search, X, Mail, Trash2, ChevronDown, AlertCircle, CheckCircle2, Clock, PauseCircle, Circle, TrendingUp, Zap, Settings, Edit2, UserPlus, Lock, PlusCircle, LogOut } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const firebaseConfig = {
@@ -20,18 +20,12 @@ const SETTINGS_PASSWORD = "fudgybro2026";
 const APP_URL = "https://fudgytrack.vercel.app";
 
 const DIVISION_PREFIX = {
-  Manajemen: 'MGT',
-  Finance: 'FIN',
-  Operasional: 'OPS',
-  Purchasing: 'PUR',
-  Marketing: 'MKT',
-  HR: 'HR',
+  Manajemen: 'MGT', Finance: 'FIN', Operasional: 'OPS',
+  Purchasing: 'PUR', Marketing: 'MKT', HR: 'HR',
 };
 
 const DEFAULT_DIVISIONS = {
-  Manajemen: { members: [
-    { name: 'Owner', email: 'gardhikafudgybro@gmail.com' },
-  ], color: '#6366F1', icon: '👑' },
+  Manajemen: { members: [{ name: 'Owner', email: 'gardhikafudgybro@gmail.com' }], color: '#6366F1', icon: '👑' },
   Finance: { members: [
     { name: 'Dhika', email: 'gardhikafudgybro@gmail.com' },
     { name: 'Ilham', email: 'ilhamhaqiqi21@gmail.com' },
@@ -44,17 +38,27 @@ const DEFAULT_DIVISIONS = {
     { name: 'Ian', email: 'zackydimas5@gmail.com' },
     { name: 'Dhanny', email: 'daydanny07@gmail.com' },
   ], color: '#10B981', icon: '⚙️' },
-  Purchasing: { members: [
-    { name: 'Fredy', email: 'prakosof26@gmail.com' },
-  ], color: '#F59E0B', icon: '🛒' },
+  Purchasing: { members: [{ name: 'Fredy', email: 'prakosof26@gmail.com' }], color: '#F59E0B', icon: '🛒' },
   Marketing: { members: [
     { name: 'Ghina', email: 'ghina.fudgybro@gmail.com' },
     { name: 'Nasywa', email: 'nasywa.widyaputri@gmail.com' },
     { name: 'Nabila', email: 'nabillazzahrahmat@gmail.com' },
   ], color: '#EC4899', icon: '📢' },
-  HR: { members: [
-    { name: 'Musfita', email: 'muspitarohmi@gmail.com' },
-  ], color: '#8B5CF6', icon: '👥' },
+  HR: { members: [{ name: 'Musfita', email: 'muspitarohmi@gmail.com' }], color: '#8B5CF6', icon: '👥' },
+};
+
+// Build credential map: email → { name, password }
+const buildCredentials = (divisions) => {
+  const creds = {};
+  Object.values(divisions).forEach(({ members }) => {
+    members.forEach(m => {
+      creds[m.email.toLowerCase()] = {
+        name: m.name,
+        password: `${m.name.toLowerCase()}123`,
+      };
+    });
+  });
+  return creds;
 };
 
 const PRIORITY_CONFIG = {
@@ -72,14 +76,10 @@ const STATUS_CONFIG = {
   'Blocked': { color: '#EF4444', bg: '#FEE2E2', icon: PauseCircle },
 };
 
-const PROJECTS = ['Website Redesign', 'Mobile App', 'Marketing Campaign', 'CRM Integration', 'Product Launch', 'Internal Tools', 'Financial Audit', 'Recruitment'];
-
 const generateId = (divisions, assignees) => {
-  if (!assignees || assignees.length === 0) return `TSK-${Date.now().toString().slice(-6)}`;
-  const firstAssignee = assignees[0];
-  const div = Object.entries(divisions).find(([, { members }]) => members.some(m => m.name === firstAssignee))?.[0];
-  const prefix = div ? (DIVISION_PREFIX[div] || 'TSK') : 'TSK';
-  return `${prefix}-${Date.now().toString().slice(-6)}`;
+  if (!assignees || !assignees.length) return `TSK-${Date.now().toString().slice(-6)}`;
+  const div = Object.entries(divisions).find(([, { members }]) => members.some(m => m.name === assignees[0]))?.[0];
+  return `${div ? (DIVISION_PREFIX[div] || 'TSK') : 'TSK'}-${Date.now().toString().slice(-6)}`;
 };
 
 const seedTasks = () => {
@@ -113,15 +113,64 @@ const PriorityBadge = ({ priority }) => {
 };
 
 const AssigneeAvatars = ({ assignees, divisions, max = 3 }) => {
-  const allMembers = Object.entries(divisions).flatMap(([, { members, color }]) => members.map(m => ({ ...m, color })));
+  const allM = Object.values(divisions).flatMap(({ members, color }) => members.map(m => ({ ...m, color })));
   const visible = assignees.slice(0, max); const extra = assignees.length - max;
   return (
     <div className="flex -space-x-2">
-      {visible.map(name => {
-        const m = allMembers.find(x => x.name === name);
-        return <div key={name} title={name} className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white shadow-sm" style={{ backgroundColor: m?.color || '#64748B' }}>{name[0]}</div>;
-      })}
+      {visible.map(name => { const m = allM.find(x => x.name === name); return <div key={name} title={name} className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white shadow-sm" style={{ backgroundColor: m?.color || '#64748B' }}>{name[0]}</div>; })}
       {extra > 0 && <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold border-2 border-white">+{extra}</div>}
+    </div>
+  );
+};
+
+// ─── Login Page ───────────────────────────────────────────────────────────────
+const LoginPage = ({ onLogin }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [showPw, setShowPw] = useState(false);
+
+  const handleLogin = () => {
+    const creds = buildCredentials(DEFAULT_DIVISIONS);
+    const match = creds[email.toLowerCase().trim()];
+    if (!match) { setError('Email tidak terdaftar.'); return; }
+    if (password !== match.password) { setError('Password salah.'); return; }
+    onLogin({ name: match.name, email: email.toLowerCase().trim() });
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-pink-600 rounded-2xl flex items-center justify-center font-bold text-white text-2xl mx-auto mb-4 shadow-lg">F</div>
+          <h1 className="text-2xl font-bold text-white">FudgyTrack</h1>
+          <p className="text-slate-400 text-sm mt-1">Team Task Management</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-2xl p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Email</label>
+            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              placeholder="email@gmail.com" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Password</label>
+            <div className="relative">
+              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 pr-16"
+                placeholder="namaanda123" />
+              <button onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700">{showPw ? 'Sembunyikan' : 'Tampilkan'}</button>
+            </div>
+          </div>
+          {error && <p className="text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <button onClick={handleLogin} className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors">
+            Masuk
+          </button>
+          <p className="text-[11px] text-slate-400 text-center">Password: nama kamu + 123 &nbsp;·&nbsp; Contoh: <span className="font-mono font-semibold">yafi123</span></p>
+        </div>
+      </div>
     </div>
   );
 };
@@ -137,12 +186,11 @@ const SettingsView = ({ divisions, setDivisions }) => {
   const saveEdit = () => {
     if (!form.name.trim() || !form.email.trim()) { alert('Nama dan email wajib diisi'); return; }
     const updated = JSON.parse(JSON.stringify(divisions));
-    if (editModal === 'new') {
-      updated[form.division].members.push({ name: form.name, email: form.email });
-    } else {
+    if (editModal === 'new') updated[form.division].members.push({ name: form.name, email: form.email });
+    else {
       const { divKey, idx } = editModal;
       if (divKey !== form.division) { updated[divKey].members.splice(idx, 1); updated[form.division].members.push({ name: form.name, email: form.email }); }
-      else { updated[divKey].members[idx] = { name: form.name, email: form.email }; }
+      else updated[divKey].members[idx] = { name: form.name, email: form.email };
     }
     setDivisions(updated); setEditModal(null);
   };
@@ -156,18 +204,18 @@ const SettingsView = ({ divisions, setDivisions }) => {
       {Object.entries(divisions).map(([divKey, { members, color, icon }]) => (
         <div key={divKey} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2" style={{ backgroundColor: `${color}10` }}>
-            <span className="text-lg">{icon}</span>
-            <span className="font-bold text-slate-900">{divKey}</span>
+            <span className="text-lg">{icon}</span><span className="font-bold text-slate-900">{divKey}</span>
             <span className="text-xs text-slate-500 ml-1">· prefix: <span className="font-mono font-bold">{DIVISION_PREFIX[divKey]}</span></span>
             <span className="text-xs text-slate-400 ml-1">({members.length} orang)</span>
           </div>
           <table className="w-full">
-            <thead><tr className="bg-slate-50 border-b border-slate-100"><th className="text-left px-4 py-2 text-[11px] font-bold text-slate-500 uppercase">Nama</th><th className="text-left px-4 py-2 text-[11px] font-bold text-slate-500 uppercase">Email</th><th className="px-4 py-2 w-16"></th></tr></thead>
+            <thead><tr className="bg-slate-50 border-b border-slate-100"><th className="text-left px-4 py-2 text-[11px] font-bold text-slate-500 uppercase">Nama</th><th className="text-left px-4 py-2 text-[11px] font-bold text-slate-500 uppercase">Email</th><th className="text-left px-4 py-2 text-[11px] font-bold text-slate-500 uppercase">Password</th><th className="px-4 py-2 w-16"></th></tr></thead>
             <tbody>
               {members.map((m, idx) => (
                 <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: color }}>{m.name[0]}</div><span className="text-sm font-semibold text-slate-900">{m.name}</span></div></td>
                   <td className="px-4 py-3 text-sm text-slate-600">{m.email}</td>
+                  <td className="px-4 py-3 text-sm font-mono text-slate-400">{m.name.toLowerCase()}123</td>
                   <td className="px-4 py-3 text-right"><button onClick={() => openEdit(divKey, idx)} className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-500"><Edit2 size={14} /></button></td>
                 </tr>
               ))}
@@ -183,6 +231,7 @@ const SettingsView = ({ divisions, setDivisions }) => {
               <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Nama</label><input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" /></div>
               <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Email</label><input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" /></div>
               <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Divisi</label><select value={form.division} onChange={e => setForm({...form, division: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">{Object.entries(divisions).map(([k, { icon }]) => <option key={k} value={k}>{icon} {k}</option>)}</select></div>
+              <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-500">🔑 Password otomatis: <span className="font-mono font-bold text-slate-700">{form.name ? `${form.name.toLowerCase()}123` : 'nama123'}</span></div>
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
               <button onClick={() => setEditModal(null)} className="px-4 py-2 text-slate-700 hover:bg-slate-200 rounded-lg text-sm">Batal</button>
@@ -196,27 +245,27 @@ const SettingsView = ({ divisions, setDivisions }) => {
 };
 
 // ─── Task Modal ───────────────────────────────────────────────────────────────
-const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
+const TaskModal = ({ task, onClose, onSave, onDelete, divisions, currentUser }) => {
   const allMembers = Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color })));
   const [form, setForm] = useState(task ? { ...task, updates: task.updates || [] } : {
     id: '', name: '', description: '', driveUrl: '',
-    assignees: [], project: PROJECTS[0], priority: 'Medium', status: 'To Do', progress: 0,
+    assignees: [], project: '', priority: 'Medium', status: 'To Do', progress: 0,
     startDate: new Date().toISOString().split('T')[0],
     deadline: new Date(Date.now() + 7*86400000).toISOString().split('T')[0],
     updates: [],
   });
   const [assigneeOpen, setAssigneeOpen] = useState(false);
-  const [newUpdate, setNewUpdate] = useState({ date: todayStr(), note: '', by: '' });
+  const [newUpdate, setNewUpdate] = useState({ date: todayStr(), note: '', by: currentUser?.name || '' });
 
   const toggleAssignee = name => setForm(f => {
-    const newAssignees = f.assignees.includes(name) ? f.assignees.filter(n => n !== name) : [...f.assignees, name];
-    return { ...f, assignees: newAssignees, id: !task ? generateId(divisions, newAssignees) : f.id };
+    const newA = f.assignees.includes(name) ? f.assignees.filter(n => n !== name) : [...f.assignees, name];
+    return { ...f, assignees: newA, id: !task ? generateId(divisions, newA) : f.id };
   });
 
   const addUpdate = () => {
     if (!newUpdate.note.trim() || !newUpdate.by.trim()) { alert('Keterangan dan nama wajib diisi'); return; }
     setForm(f => ({ ...f, updates: [...(f.updates || []), { ...newUpdate, id: Date.now() }] }));
-    setNewUpdate({ date: todayStr(), note: '', by: '' });
+    setNewUpdate({ date: todayStr(), note: '', by: currentUser?.name || '' });
   };
 
   const removeUpdate = (id) => setForm(f => ({ ...f, updates: f.updates.filter(u => u.id !== id) }));
@@ -245,7 +294,6 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
           <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Nama Tugas</label><input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Nama tugas..." /></div>
           <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Deskripsi</label><textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" rows={2} /></div>
 
-          {/* Assignee */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Assignee</label>
             <button onClick={() => setAssigneeOpen(!assigneeOpen)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-left text-sm flex items-center justify-between hover:bg-slate-50">
@@ -277,7 +325,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Project</label><select value={form.project} onChange={e => setForm({...form, project: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">{PROJECTS.map(p => <option key={p}>{p}</option>)}</select></div>
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Project</label><input type="text" value={form.project} onChange={e => setForm({...form, project: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Nama project..." /></div>
             <div><label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase">Prioritas</label><select value={form.priority} onChange={e => setForm({...form, priority: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">{Object.keys(PRIORITY_CONFIG).map(p => <option key={p}>{p}</option>)}</select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -310,7 +358,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
                       </div>
                       <p className="text-xs text-slate-700 mt-0.5">{u.note}</p>
                     </div>
-                    <button onClick={() => removeUpdate(u.id)} className="text-slate-400 hover:text-red-500 mt-0.5 flex-shrink-0"><X size={13} /></button>
+                    <button onClick={() => removeUpdate(u.id)} className="text-slate-400 hover:text-red-500 mt-0.5"><X size={13} /></button>
                   </div>
                 ))}
               </div>
@@ -319,7 +367,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
               <p className="text-[11px] font-semibold text-slate-600 uppercase">+ Tambah Update</p>
               <div className="grid grid-cols-2 gap-2">
                 <div><label className="text-[10px] text-slate-500 uppercase">Tanggal</label><input type="date" value={newUpdate.date} onChange={e => setNewUpdate({...newUpdate, date: e.target.value})} className="w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs mt-0.5" /></div>
-                <div><label className="text-[10px] text-slate-500 uppercase">Oleh (nama)</label><input type="text" value={newUpdate.by} onChange={e => setNewUpdate({...newUpdate, by: e.target.value})} placeholder="Contoh: Hikmah" className="w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs mt-0.5" /></div>
+                <div><label className="text-[10px] text-slate-500 uppercase">Oleh (nama)</label><input type="text" value={newUpdate.by} onChange={e => setNewUpdate({...newUpdate, by: e.target.value})} placeholder="Nama updater" className="w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs mt-0.5" /></div>
               </div>
               <div><label className="text-[10px] text-slate-500 uppercase">Keterangan Update</label><input type="text" value={newUpdate.note} onChange={e => setNewUpdate({...newUpdate, note: e.target.value})} placeholder="Contoh: Rekon bank mutasi sd 20 Feb 2026" className="w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs mt-0.5" /></div>
               <button onClick={addUpdate} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-xs font-semibold"><PlusCircle size={13} /> Tambah</button>
@@ -340,6 +388,7 @@ const TaskModal = ({ task, onClose, onSave, onDelete, divisions }) => {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [divisions, setDivisions] = useState(DEFAULT_DIVISIONS);
   const [loading, setLoading] = useState(true);
@@ -356,6 +405,7 @@ export default function App() {
   const allMembers = useMemo(() => Object.entries(divisions).flatMap(([div, { members, color }]) => members.map(m => ({ ...m, division: div, color }))), [divisions]);
 
   useEffect(() => {
+    if (!currentUser) return;
     const ref = collection(db, 'tasks');
     const unsub = onSnapshot(ref, async (snap) => {
       if (snap.empty) {
@@ -369,7 +419,10 @@ export default function App() {
       setLoading(false);
     }, (err) => { console.error(err); setFbStatus('error'); setLoading(false); });
     return () => unsub();
-  }, []);
+  }, [currentUser]);
+
+  const handleLogin = (user) => { setCurrentUser(user); setLoading(true); };
+  const handleLogout = () => { setCurrentUser(null); setView('dashboard'); setSettingsUnlocked(false); };
 
   const handleSettingsClick = () => {
     if (settingsUnlocked) { setView('settings'); return; }
@@ -378,7 +431,7 @@ export default function App() {
 
   const submitPassword = () => {
     if (pwInput === SETTINGS_PASSWORD) { setSettingsUnlocked(true); setPwModal(false); setView('settings'); }
-    else { setPwError(true); }
+    else setPwError(true);
   };
 
   const saveTask = async (task) => { await setDoc(doc(db, 'tasks', task.id), task); setModalOpen(false); setModalTask(null); };
@@ -407,6 +460,8 @@ export default function App() {
     return { total, done, inProgress, overdue, urgent, blocked, completionRate, byStatus, byDivision };
   }, [tasks, divisions]);
 
+  if (!currentUser) return <LoginPage onLogin={handleLogin} />;
+
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
       <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-600 rounded-xl flex items-center justify-center font-bold text-white text-lg animate-pulse">F</div>
@@ -423,33 +478,34 @@ export default function App() {
             <div>
               <h1 className="font-bold text-white text-sm">FudgyTrack</h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${fbStatus === 'connected' ? 'bg-emerald-400' : fbStatus === 'error' ? 'bg-red-400' : 'bg-yellow-400'}`} />
-                <p className="text-[10px] text-slate-500">{fbStatus === 'connected' ? 'Firebase Connected' : fbStatus === 'error' ? 'Error' : 'Connecting...'}</p>
+                <div className={`w-1.5 h-1.5 rounded-full ${fbStatus === 'connected' ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
+                <p className="text-[10px] text-slate-500">{fbStatus === 'connected' ? 'Connected' : 'Connecting...'}</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* User info */}
+        <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">{currentUser.name[0]}</div>
+          <div className="flex-1 min-w-0"><div className="text-xs font-semibold text-white truncate">{currentUser.name}</div><div className="text-[10px] text-slate-500 truncate">{currentUser.email}</div></div>
+          <button onClick={handleLogout} title="Logout" className="text-slate-500 hover:text-red-400 transition"><LogOut size={14} /></button>
+        </div>
+
         <nav className="flex-1 p-3 space-y-1">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'tasks', label: 'Semua Tugas', icon: ListTodo },
-            { id: 'team', label: 'Tim & Divisi', icon: Users },
-          ].map(item => {
+          {[{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }, { id: 'tasks', label: 'Semua Tugas', icon: ListTodo }, { id: 'team', label: 'Tim & Divisi', icon: Users }].map(item => {
             const Icon = item.icon; const active = view === item.id;
             return <button key={item.id} onClick={() => setView(item.id)} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-orange-500 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><Icon size={16} />{item.label}</button>;
           })}
           <button onClick={handleSettingsClick} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'settings' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-            {settingsUnlocked ? <Settings size={16} /> : <Lock size={16} />}
-            Settings
+            {settingsUnlocked ? <Settings size={16} /> : <Lock size={16} />} Settings
           </button>
         </nav>
         <div className="p-3 border-t border-slate-800">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-3">Divisi</div>
           {Object.entries(divisions).map(([name, { icon }]) => (
-            <button key={name} onClick={() => { setView('tasks'); setFilters(f => ({...f, division: name})); }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-slate-400 hover:bg-slate-800 hover:text-white">
-              <span>{icon}</span><span className="flex-1 text-left">{name}</span>
-              <span className="text-[10px] font-mono text-orange-400">{DIVISION_PREFIX[name]}</span>
+            <button key={name} onClick={() => { setView('tasks'); setFilters(f => ({...f, division: name})); }} className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-slate-400 hover:bg-slate-800 hover:text-white">
+              <span>{icon}</span><span className="flex-1 text-left">{name}</span><span className="text-[10px] font-mono text-orange-400">{DIVISION_PREFIX[name]}</span>
             </button>
           ))}
         </div>
@@ -462,9 +518,7 @@ export default function App() {
             <p className="text-xs text-slate-500 mt-0.5">{view === 'dashboard' ? `${stats.total} tugas · ${stats.completionRate}% selesai` : view === 'tasks' ? `${filtered.length} dari ${tasks.length} tugas` : view === 'team' ? `${allMembers.length} anggota` : 'Kelola data karyawan'}</p>
           </div>
           {view !== 'settings' && (
-            <button onClick={() => { setModalTask(null); setModalOpen(true); }} className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5">
-              <Plus size={16} /> Tugas Baru
-            </button>
+            <button onClick={() => { setModalTask(null); setModalOpen(true); }} className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5"><Plus size={16} /> Tugas Baru</button>
           )}
         </header>
 
@@ -556,24 +610,9 @@ export default function App() {
                             <td className="px-4 py-3 text-xs text-slate-700">{t.project}</td>
                             <td className="px-4 py-3"><PriorityBadge priority={t.priority} /></td>
                             <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2 w-24">
-                                <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${t.progress}%`, backgroundColor: t.progress === 100 ? '#10B981' : '#F97316' }} /></div>
-                                <span className="text-xs font-semibold text-slate-700 w-8">{t.progress}%</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                              {t.driveUrl ? <a href={t.driveUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline font-medium">Buka →</a> : <span className="text-xs text-slate-300">-</span>}
-                            </td>
-                            <td className="px-4 py-3">
-                              {lastUpdate ? (
-                                <div>
-                                  <div className="text-[11px] font-bold text-orange-600">{formatDate(lastUpdate.date)}</div>
-                                  <div className="text-[10px] text-slate-500 line-clamp-1">{lastUpdate.note}</div>
-                                  <div className="text-[10px] text-slate-400">by {lastUpdate.by}</div>
-                                </div>
-                              ) : <span className="text-xs text-slate-300">-</span>}
-                            </td>
+                            <td className="px-4 py-3"><div className="flex items-center gap-2 w-24"><div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${t.progress}%`, backgroundColor: t.progress === 100 ? '#10B981' : '#F97316' }} /></div><span className="text-xs font-semibold text-slate-700 w-8">{t.progress}%</span></div></td>
+                            <td className="px-4 py-3" onClick={e => e.stopPropagation()}>{t.driveUrl ? <a href={t.driveUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline font-medium">Buka →</a> : <span className="text-xs text-slate-300">-</span>}</td>
+                            <td className="px-4 py-3">{lastUpdate ? <div><div className="text-[11px] font-bold text-orange-600">{formatDate(lastUpdate.date)}</div><div className="text-[10px] text-slate-500 line-clamp-1">{lastUpdate.note}</div><div className="text-[10px] text-slate-400">by {lastUpdate.by}</div></div> : <span className="text-xs text-slate-300">-</span>}</td>
                             <td className={`px-4 py-3 text-xs font-medium ${overdue ? 'text-red-600' : soon ? 'text-orange-600' : 'text-slate-700'}`}>
                               {formatDate(t.deadline)}
                               {overdue && <div className="text-[10px] font-bold">Terlambat {Math.abs(days)}h</div>}
@@ -634,19 +673,19 @@ export default function App() {
               <h2 className="font-bold text-slate-900 text-lg">Settings Terkunci</h2>
               <p className="text-xs text-slate-500 mt-1">Masukkan password untuk akses Settings</p>
             </div>
-            <div className="px-6 pb-4 space-y-3">
+            <div className="px-6 pb-6 space-y-3">
               <input type="password" value={pwInput} onChange={e => { setPwInput(e.target.value); setPwError(false); }}
                 onKeyDown={e => e.key === 'Enter' && submitPassword()}
                 placeholder="Password..." autoFocus
                 className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${pwError ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
-              {pwError && <p className="text-xs text-red-500 font-medium">Password salah, coba lagi.</p>}
+              {pwError && <p className="text-xs text-red-500 font-medium">Password salah.</p>}
               <button onClick={submitPassword} className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-semibold">Masuk</button>
             </div>
           </div>
         </div>
       )}
 
-      {modalOpen && <TaskModal task={modalTask} onClose={() => { setModalOpen(false); setModalTask(null); }} onSave={saveTask} onDelete={modalTask ? deleteTask : null} divisions={divisions} />}
+      {modalOpen && <TaskModal task={modalTask} onClose={() => { setModalOpen(false); setModalTask(null); }} onSave={saveTask} onDelete={modalTask ? deleteTask : null} divisions={divisions} currentUser={currentUser} />}
     </div>
   );
 }
